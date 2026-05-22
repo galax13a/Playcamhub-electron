@@ -1,11 +1,11 @@
 # Changelog
 
-All notable changes to PlayRyu will be documented in this file.
+All notable changes to StarchoElectron will be documented in this file.
 
 ## [1.0.0] — 2024-01-01
 
 ### Added
-- Initial release of PlayRyu
+- Initial release of StarchoElectron
 - Music library with grid and list views
 - TikTok-style vertical swipe player with auto-play on scroll
 - YouTube search and audio download via yt-dlp

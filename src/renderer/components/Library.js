@@ -14,7 +14,7 @@ export async function renderHome(el) {
 
   el.innerHTML = `
     <div class="topbar">
-      <span class="topbar-title">🎵 PlayRyu</span>
+      <span class="topbar-title">🎵 Starcho</span>
       <span class="topbar-spacer"></span>
     </div>
     <div id="home-content" style="padding:0 0 24px"></div>`;

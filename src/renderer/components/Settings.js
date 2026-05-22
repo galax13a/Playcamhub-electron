@@ -609,7 +609,7 @@ function _bindLibrary(el) {
       const a    = document.createElement('a');
       const date = new Date().toISOString().slice(0, 10);
       a.href     = url;
-      a.download = `playryu-library-${date}.json`;
+      a.download = `starcho-library-${date}.json`;
       a.click();
       URL.revokeObjectURL(url);
       showToast(`Library exported (${data.songs.length} songs)`, 'success');
@@ -633,7 +633,7 @@ function _bindLibrary(el) {
       try { data = JSON.parse(ev.target.result); }
       catch (_) { showToast('Invalid JSON file', 'error'); return; }
 
-      if (!data?.songs) { showToast('Not a valid PlayRyu library file', 'error'); return; }
+      if (!data?.songs) { showToast('Not a valid StarchoElectron library file', 'error'); return; }
 
       openImportLibraryModal(data, async (redownload) => {
         try {
@@ -742,7 +742,7 @@ function _bindReset(el) {
               const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
               const url  = URL.createObjectURL(blob);
               const a    = document.createElement('a');
-              a.href = url; a.download = 'playryu-backup.json'; a.click();
+              a.href = url; a.download = 'starcho-backup.json'; a.click();
               URL.revokeObjectURL(url);
               showToast(t('lib_export_title') + ' ✅', 'success');
             } catch (err) {

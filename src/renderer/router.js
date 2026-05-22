@@ -29,12 +29,12 @@ function showView(name, extra = {}) {
     return;
   }
 
-  // Special: playlist (served by PlayRyu plugin but triggered with core navigate API)
+  // Special: playlist (served by the starcho plugin but triggered via core navigate API)
   if (name === 'playlist') {
     const slot = document.getElementById('view-plugin');
     if (slot) {
       slot.classList.add('active');
-      PluginRegistry.renderView('playryu:playlist', slot, extra);
+      PluginRegistry.renderView('starcho:playlist', slot, extra);
     }
     _current = name;
     _updateSidebarActive(name);

@@ -1,6 +1,6 @@
 'use strict';
 
-// PlayRyu plugin — backend entry point.
+// Starcho plugin — backend entry point.
 // PluginManager calls migrate() then register() on every app start.
 
 const { migrate } = require('./migrations');
@@ -12,7 +12,7 @@ module.exports = {
   },
 
   register(router, _db, _appPaths) {
-    // Mount all PlayRyu routes at the same /api/* paths the frontend expects.
+    // Mount all starcho routes at the same /api/* paths the frontend expects.
     router.use('/', routes);
   },
 };

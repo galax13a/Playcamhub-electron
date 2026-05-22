@@ -1,8 +1,8 @@
 'use strict';
 
-// Mount all PlayRyu REST endpoints.
-// The actual controller/model logic lives in src/backend/ — this file is
-// the plugin's routing entry-point that re-uses those existing modules.
+// Mount all starcho REST endpoints.
+// Controller/model logic lives in src/backend/ — this file is the plugin's
+// routing entry-point that re-uses those shared modules.
 
 const router = require('express').Router();
 

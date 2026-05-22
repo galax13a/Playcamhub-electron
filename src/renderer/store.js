@@ -27,7 +27,7 @@ const store = {
     downloadQueue:[],
     history:      [],
     settings:     {},
-    appConfig:    { appName: 'PlayRyu', appSlogan: 'Gestor Música para creadores', appVersion: '1.0.0', logoText: 'App Music', appTitle: 'PlayRyu — Music Player' },
+    appConfig:    { appName: 'StarchoElectron', appSlogan: 'Starkit para apps Electron', appVersion: '1.0.0', logoText: 'Starcho', appTitle: 'StarchoElectron — Dev Platform' },
     loggedUser:   null,
   },
 

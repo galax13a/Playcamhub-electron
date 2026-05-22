@@ -1,7 +1,7 @@
 'use strict';
 
 // ── Core router — auth + config + settings + plugin management ──────────────
-// Music, playlists, categories, upload, library → handled by the PlayRyu plugin.
+// Music, playlists, categories, upload, library → handled by the starcho plugin.
 // Contacts, etc.                                → handled by their own plugins.
 
 const crypto = require('crypto');

@@ -1,6 +1,6 @@
 {
-  "name": "playryu",
-  "productName": "PlayRyu",
+  "name": "starcho-electron",
+  "productName": "StarchoElectron",
   "version": "1.0.0",
   "description": "Music player with Spotify UI and TikTok experience — download, organize, and vibe.",
   "main": "main.js",
@@ -17,9 +17,9 @@
     "postinstall": "electron-builder install-app-deps"
   },
   "build": {
-    "appId": "com.playryu.app",
-    "productName": "PlayRyu",
-    "copyright": "Copyright © 2024 PlayRyu",
+    "appId": "com.starcho.electron",
+    "productName": "StarchoElectron",
+    "copyright": "Copyright © 2024 StarchoElectron",
     "asar": false,
     "directories": {
       "output": "dist",
@@ -46,7 +46,7 @@
         }
       ],
       "icon": "assets/icons/icon.png",
-      "publisherName": "PlayRyu"
+      "publisherName": "StarchoElectron"
     },
     "mac": {
       "target": [
@@ -75,10 +75,10 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "PlayRyu"
+      "shortcutName": "StarchoElectron"
     },
     "dmg": {
-      "title": "PlayRyu Installer",
+      "title": "StarchoElectron Installer",
       "window": {
         "width": 540,
         "height": 380
@@ -86,8 +86,8 @@
     },
     "publish": {
       "provider": "github",
-      "owner": "playryu",
-      "repo": "playryu",
+      "owner": "galax13a",
+      "repo": "StarchoElectron",
       "releaseType": "release"
     }
   },
@@ -100,8 +100,8 @@
     "electron"
   ],
   "author": {
-    "name": "PlayRyu Team",
-    "email": "hello@playryu.app"
+    "name": "Starcho Dev",
+    "email": "botcamdev@gmail.com"
   },
   "license": "MIT",
   "devDependencies": {

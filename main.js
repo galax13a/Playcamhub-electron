@@ -27,10 +27,10 @@ const { buildMenu } = require('./src/main/menuBuilder');
 const { startServer } = require('./src/backend/server');
 
 log.transports.file.level = 'info';
-log.info('PlayRyu starting…', app.getVersion());
+log.info('StarchoElectron starting…', app.getVersion());
 
 // Set App User Model ID so Windows taskbar shows the custom icon
-app.setAppUserModelId(process.env.APP_ID || 'com.playryu.app');
+app.setAppUserModelId(process.env.APP_ID || 'com.starcho.electron');
 
 // Single instance lock
 const gotLock = app.requestSingleInstanceLock();
@@ -40,11 +40,11 @@ if (!gotLock) {
 }
 
 const APP_PATHS = {
-  userData:    path.join(app.getPath('userData'), 'PlayRyu'),
-  music:       path.join(app.getPath('userData'), 'PlayRyu', 'music'),
-  thumbnails:  path.join(app.getPath('userData'), 'PlayRyu', 'thumbnails'),
-  bin:         path.join(app.getPath('userData'), 'PlayRyu', 'bin'),
-  db:          path.join(app.getPath('userData'), 'PlayRyu', 'playryu.db'),
+  userData:    path.join(app.getPath('userData'), 'StarchoElectron'),
+  music:       path.join(app.getPath('userData'), 'StarchoElectron', 'music'),
+  thumbnails:  path.join(app.getPath('userData'), 'StarchoElectron', 'thumbnails'),
+  bin:         path.join(app.getPath('userData'), 'StarchoElectron', 'bin'),
+  db:          path.join(app.getPath('userData'), 'StarchoElectron', 'starcho.db'),
 };
 
 global.APP_PATHS = APP_PATHS;
@@ -94,4 +94,4 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
-app.on('will-quit', () => log.info('PlayRyu shutting down'));
+app.on('will-quit', () => log.info('StarchoElectron shutting down'));

@@ -33,13 +33,13 @@ async function boot() {
 
   // Apply APP_TITLE to the title bar
   const _tb = document.getElementById('tb-title');
-  if (_tb) _tb.textContent = store.state.appConfig.appTitle || 'PlayRyu — Music Player';
+  if (_tb) _tb.textContent = store.state.appConfig.appTitle || 'StarchoElectron — Dev Platform';
 
   // 3. Load plugins (frontend) — populates nav items before sidebar renders
   await PluginRegistry.init();
 
-  // 4. Load PlayRyu data only if the plugin is active
-  if (PluginRegistry.getPlugins().some(p => p.id === 'playryu')) {
+  // 4. Load starcho plugin data only if the plugin is active
+  if (PluginRegistry.getPlugins().some(p => p.id === 'starcho')) {
     await Promise.all([
       store.loadSongs(),
       store.loadPlaylists(),
@@ -67,7 +67,7 @@ async function boot() {
   // 8. Wire global keyboard shortcuts
   wireKeyboard();
 
-  console.log('PlayRyu v1.0.0 ready 🎵');
+  console.log('StarchoElectron v1.0.0 ready 🚀');
 }
 
 function wireWindowControls() {
@@ -138,11 +138,11 @@ window.addEventListener('user:login', async (e) => {
 });
 
 boot().catch(err => {
-  console.error('PlayRyu boot failed:', err);
+  console.error('StarchoElectron boot failed:', err);
   document.getElementById('app').innerHTML = `
     <div style="color:#fff;background:#0a0a0a;height:100vh;display:flex;align-items:center;
                 justify-content:center;font-family:sans-serif;flex-direction:column;gap:16px">
-      <h2 style="color:#FF3366">PlayRyu failed to start</h2>
+      <h2 style="color:#FF3366">StarchoElectron failed to start</h2>
       <pre style="color:#888;font-size:12px">${err.message}</pre>
     </div>`;
 });

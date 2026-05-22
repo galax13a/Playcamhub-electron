@@ -1,6 +1,6 @@
 'use strict';
 
-// All music-related tables owned by the PlayRyu plugin.
+// All music-related tables owned by the starcho plugin.
 // Called once by PluginManager before routes are registered.
 
 function migrate(db) {

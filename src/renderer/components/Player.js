@@ -298,7 +298,7 @@ function bindStoreEvents(el) {
     const tb = document.getElementById('tb-title');
     if (tb) tb.textContent = song
       ? `${song.title} — ${song.artist || 'Unknown'}`
-      : (store.state.appConfig.appTitle || 'PlayRyu — Music Player');
+      : (store.state.appConfig.appTitle || 'StarchoElectron — Dev Platform');
   });
 
   EventBus.on('store:isPlaying', (playing) => {
