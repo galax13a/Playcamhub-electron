@@ -238,6 +238,7 @@ function bindUIEvents(el) {
 function bindStoreEvents(el) {
   EventBus.on('store:currentSong', (song) => {
     if (!song) return;
+    document.getElementById('player-bar')?.classList.add('active');
     const isVideo = song.type === 'video';
     const src     = API.musicUrl(song.file_path);
 

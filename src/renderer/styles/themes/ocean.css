@@ -1,0 +1,66 @@
+[data-theme="ocean"] {
+  /* Brand palette – deep ocean teal/blue */
+  --red:          #00B4D8;
+  --red-dark:     #0077B6;
+  --red-glow:     rgba(0,180,216,0.30);
+  --purple:       #48CAE4;
+  --purple-dark:  #0096C7;
+  --purple-glow:  rgba(72,202,228,0.30);
+  --green:        #52B788;
+  --green-dark:   #40916C;
+  --green-glow:   rgba(82,183,136,0.28);
+
+  /* Backgrounds */
+  --bg-base:         #010C1A;
+  --bg-1:            #03152B;
+  --bg-2:            #041E3A;
+  --bg-3:            #06294F;
+  --bg-4:            #093566;
+  --bg-glass:        rgba(0,180,216,0.05);
+  --bg-glass-hover:  rgba(0,180,216,0.10);
+
+  /* Text */
+  --text-primary:    #E0F4FF;
+  --text-secondary:  rgba(224,244,255,0.65);
+  --text-muted:      rgba(224,244,255,0.35);
+
+  /* Borders */
+  --border:          rgba(0,180,216,0.12);
+  --border-strong:   rgba(0,180,216,0.28);
+
+  /* Gradients */
+  --gradient-brand: linear-gradient(135deg,#00B4D8 0%,#0077B6 100%);
+  --gradient-brand-vert: linear-gradient(180deg,#00B4D8 0%,#023E8A 100%);
+  --gradient-dark:  linear-gradient(180deg,#041E3A 0%,#010C1A 100%);
+
+  /* Shadows */
+  --shadow-sm:  0 2px 8px rgba(0,0,0,0.65);
+  --shadow-md:  0 4px 24px rgba(0,0,0,0.80);
+  --shadow-lg:  0 8px 48px rgba(0,0,0,0.92);
+  --shadow-glow-red:    0 0 24px rgba(0,180,216,0.45);
+  --shadow-glow-purple: 0 0 24px rgba(72,202,228,0.45);
+  --shadow-glow-green:  0 0 24px rgba(82,183,136,0.40);
+
+  /* Layout */
+  --sidebar-width:   240px;
+  --player-height:   90px;
+  --topbar-height:   60px;
+  --titlebar-height: 32px;
+
+  /* Typography */
+  --font-sans: -apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+  --font-mono: 'Courier New', monospace;
+
+  /* Motion */
+  --transition:      0.18s ease;
+  --transition-slow: 0.38s ease;
+
+  /* Radii */
+  --radius-xs:   4px;
+  --radius-sm:   8px;
+  --radius-md:  12px;
+  --radius-lg:  18px;
+  --radius-xl:  24px;
+  --radius-2xl: 32px;
+  --radius-full: 9999px;
+}

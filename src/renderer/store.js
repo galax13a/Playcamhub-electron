@@ -80,7 +80,7 @@ const store = {
     this.setState({ settings: s });
     if (s.theme)    this.applyTheme(s.theme);
     if (s.volume)   this.setState({ volume: Number(s.volume) / 100 });
-    if (s.language) { setLang(s.language); EventBus.emit('lang:change', s.language); }
+    if (s.language) { setLang(s.language); }  // no emit here — router not ready yet at boot
     return s;
   },
 
@@ -170,7 +170,7 @@ const store = {
     const settings = { ...this.state.settings, language: lang };
     this.setState({ settings });
     API.settings.setMany({ language: lang }).catch(() => {});
-    EventBus.emit('lang:change', lang);
+    EventBus.emit('lang:change', lang);  // single controlled emission
   },
 
   // ── Theme ──────────────────────────────────────────────────────────────────
@@ -185,6 +185,7 @@ const store = {
   navigate(view, extra = {}) {
     this.setState({ currentView: view, ...extra });
     EventBus.emit('navigate', { view, ...extra });
+    try { localStorage.setItem('last_view', view); } catch (_) {}
   },
 };
 

@@ -2,6 +2,9 @@
 
 const { ipcMain, app, shell, Notification } = require('electron');
 const { getMainWindow, createMiniPlayerWindow, getMiniPlayerWindow } = require('./windowManager');
+const { IS_DEV } = require('./env');
+const fs   = require('fs');
+const path = require('path');
 
 function registerIpcHandlers(appPaths, serverPort) {
 
@@ -9,6 +12,56 @@ function registerIpcHandlers(appPaths, serverPort) {
   ipcMain.handle('app:get-server-port', () => serverPort);
   ipcMain.handle('app:get-version',     () => app.getVersion());
   ipcMain.handle('app:get-paths',       () => appPaths);
+  ipcMain.handle('app:is-dev',          () => IS_DEV);
+
+  // ── Error log ─────────────────────────────────────────────────────────────
+  const logPath = path.join(app.getPath('userData'), 'errors.log');
+
+  ipcMain.on('log:write', (_event, msg) => {
+    try {
+      fs.appendFileSync(logPath, `[${new Date().toISOString()}] ${msg}\n`, 'utf8');
+    } catch (_) {}
+  });
+
+  ipcMain.handle('log:read', () => {
+    try { return fs.readFileSync(logPath, 'utf8'); } catch (_) { return ''; }
+  });
+
+  ipcMain.handle('log:clear', () => {
+    try { fs.writeFileSync(logPath, '', 'utf8'); } catch (_) {}
+  });
+
+  // ── System performance stats ──────────────────────────────────────────────
+  // Returns { cpu, memory } sampled over a 300 ms window.
+  ipcMain.handle('system:stats', async () => {
+    const os = require('os');
+
+    // Sample CPU tick counters before and after a short delay
+    const snap = () => os.cpus().map(c => ({ ...c.times }));
+    const before = snap();
+    await new Promise(r => setTimeout(r, 300));
+    const after  = snap();
+
+    let totalDiff = 0, idleDiff = 0;
+    before.forEach((b, i) => {
+      const a = after[i];
+      const total = (a.user - b.user) + (a.nice - b.nice) + (a.sys - b.sys) + (a.idle - b.idle);
+      totalDiff += total;
+      idleDiff  += (a.idle - b.idle);
+    });
+    const cpuPercent = totalDiff > 0 ? Math.round((1 - idleDiff / totalDiff) * 100) : 0;
+
+    // Memory from OS (total physical RAM)
+    const totalMem   = os.totalmem();
+    const freeMem    = os.freemem();
+    const usedMem    = totalMem - freeMem;
+    const memPercent = Math.round((usedMem / totalMem) * 100);
+
+    return {
+      cpu:    cpuPercent,
+      memory: { total: totalMem, used: usedMem, percent: memPercent },
+    };
+  });
 
   // ── Window controls ───────────────────────────────────────────────────────
   ipcMain.on('window:minimize', () => {

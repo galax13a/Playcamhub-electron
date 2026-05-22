@@ -1,5 +1,5 @@
 import API        from '../../../../src/renderer/utils/api.js';
-import { openModal, showToast } from '../../../../src/renderer/components/Modal.js';
+import { openModal, showToast, markFieldErrors, clearFieldErrors } from '../../../../src/renderer/components/Modal.js';
 import store from '../../../../src/renderer/store.js';
 
 const STATUS_LABELS = {
@@ -132,53 +132,57 @@ function _openForm(task, onSaved) {
     content: `
       <div class="form-group">
         <label>Título *</label>
-        <input class="form-control" id="tk-f-title" placeholder="Título de la tarea"
+        <input class="form-control" id="tk-f-title" data-field="title" placeholder="Título de la tarea"
                value="${_esc(task?.title || '')}">
       </div>
       <div class="form-group">
         <label>Descripción</label>
-        <textarea class="form-control" id="tk-f-desc" rows="3" style="resize:vertical"
+        <textarea class="form-control" id="tk-f-desc" data-field="description" rows="3" style="resize:vertical"
           placeholder="Descripción opcional…">${_esc(task?.description || '')}</textarea>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <div class="form-group">
           <label>Estado</label>
-          <select class="form-control" id="tk-f-status">${statusOpts}</select>
+          <select class="form-control" id="tk-f-status" data-field="status">${statusOpts}</select>
         </div>
         <div class="form-group">
           <label>Prioridad</label>
-          <select class="form-control" id="tk-f-priority">${priorityOpts}</select>
+          <select class="form-control" id="tk-f-priority" data-field="priority">${priorityOpts}</select>
         </div>
       </div>
       <div class="form-group">
         <label>Fecha límite</label>
-        <input class="form-control" type="date" id="tk-f-due" value="${task?.due_date || ''}">
+        <input class="form-control" type="date" id="tk-f-due" data-field="due_date" value="${task?.due_date || ''}">
       </div>`,
     actions: [
       { label: 'Cancelar', class: 'btn-secondary', action: (close) => close() },
       {
         label: isEdit ? 'Guardar' : 'Crear',
         class: 'btn-primary',
-        action: async (close) => {
+        action: async (close, formEl) => {
+          clearFieldErrors(formEl);
           const title       = document.getElementById('tk-f-title').value.trim();
           const description = document.getElementById('tk-f-desc').value.trim();
           const status      = document.getElementById('tk-f-status').value;
           const priority    = document.getElementById('tk-f-priority').value;
           const due_date    = document.getElementById('tk-f-due').value;
-          if (!title) { document.getElementById('tk-f-title').focus(); return; }
+          const username    = store.state.loggedUser?.username;
+          const payload     = { title, description: description || null, status, priority, due_date: due_date || null, username };
 
-          const username = store.state.loggedUser?.username;
-          const payload  = { title, description: description || null, status, priority, due_date: due_date || null, username };
-
-          if (isEdit) {
-            await API.tasks.update(task.id, payload);
-            showToast('Tarea actualizada', 'success');
-          } else {
-            await API.tasks.create(payload);
-            showToast('Tarea creada', 'success');
+          try {
+            if (isEdit) {
+              await API.tasks.update(task.id, payload);
+              showToast('Tarea actualizada', 'success');
+            } else {
+              await API.tasks.create(payload);
+              showToast('Tarea creada', 'success');
+            }
+            close();
+            onSaved();
+          } catch (err) {
+            markFieldErrors(err.fields, formEl);
+            showToast(err.message || 'Error al guardar', 'error');
           }
-          close();
-          onSaved();
         },
       },
     ],

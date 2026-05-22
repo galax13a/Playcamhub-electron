@@ -742,6 +742,294 @@
   box-shadow: 0 0 12px rgba(0,100,255,.22);
 }
 
+/* ════════════════════════════════════════════════════════════════
+   THEME 7 — CYBER  (cyberpunk grid rain + glitch)
+════════════════════════════════════════════════════════════════ */
+#login-page[data-ltheme="cyber"] {
+  background: #000000;
+  overflow: hidden;
+}
+
+/* Animated grid floor */
+#login-page[data-ltheme="cyber"]::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,255,255,.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,255,255,.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+  animation: cyber-grid 20s linear infinite;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Scanlines overlay */
+#login-page[data-ltheme="cyber"]::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.18) 2px,
+    rgba(0,0,0,0.18) 4px
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+
+#login-page[data-ltheme="cyber"] .lp-blob-1 {
+  background: radial-gradient(circle, #FF00FF 0%, rgba(255,0,255,0) 70%);
+  opacity: 0.18;
+  width: 500px; height: 500px;
+  top: -100px; left: -100px;
+  animation: cyber-pulse 4s ease-in-out infinite alternate;
+}
+#login-page[data-ltheme="cyber"] .lp-blob-2 {
+  background: radial-gradient(circle, #00FFFF 0%, rgba(0,255,255,0) 70%);
+  opacity: 0.18;
+  width: 600px; height: 600px;
+  bottom: -150px; right: -120px;
+  animation: cyber-pulse 5s ease-in-out infinite alternate-reverse;
+}
+
+#login-page[data-ltheme="cyber"] .lp-card {
+  background: rgba(0,0,0,0.85);
+  border: 1px solid rgba(0,255,255,0.3);
+  box-shadow: 0 0 40px rgba(0,255,255,0.10), 0 0 80px rgba(255,0,255,0.06), inset 0 0 60px rgba(0,0,0,0.4);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+  position: relative;
+  z-index: 2;
+}
+#login-page[data-ltheme="cyber"] .lp-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #00FFFF, #FF00FF, transparent);
+  animation: cyber-scanbar 3s linear infinite;
+}
+#login-page[data-ltheme="cyber"] .lp-app-name {
+  background: linear-gradient(90deg, #00FFFF, #FF00FF);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: cyber-glitch 6s steps(1) infinite;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+#login-page[data-ltheme="cyber"] .form-control {
+  background: rgba(0,255,255,0.04);
+  border-color: rgba(0,255,255,0.2);
+  color: #00FFFF;
+  font-family: 'Courier New', monospace;
+}
+#login-page[data-ltheme="cyber"] .form-control:focus {
+  border-color: #00FFFF;
+  box-shadow: 0 0 0 3px rgba(0,255,255,0.15);
+}
+#login-page[data-ltheme="cyber"] .lp-submit-btn {
+  background: transparent;
+  border: 1px solid #00FFFF;
+  color: #00FFFF;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition: all 0.2s ease;
+}
+#login-page[data-ltheme="cyber"] .lp-submit-btn:hover {
+  background: #00FFFF;
+  color: #000000;
+  box-shadow: 0 0 20px rgba(0,255,255,0.5);
+}
+#login-page[data-ltheme="cyber"] .lp-tab-btn.active {
+  color: #00FFFF;
+  border-bottom-color: #00FFFF;
+}
+
+@keyframes cyber-grid {
+  0%   { background-position: 0 0, 0 0; }
+  100% { background-position: 0 80px, 80px 0; }
+}
+@keyframes cyber-pulse {
+  0%   { transform: scale(1); opacity: 0.18; }
+  100% { transform: scale(1.15); opacity: 0.28; }
+}
+@keyframes cyber-scanbar {
+  0%   { top: 0%; opacity: 1; }
+  50%  { opacity: 0.3; }
+  100% { top: 100%; opacity: 1; }
+}
+@keyframes cyber-glitch {
+  0%,95%,100% { text-shadow: none; }
+  96% { text-shadow: -2px 0 #FF00FF, 2px 0 #00FFFF; }
+  97% { text-shadow: 2px 0 #FF00FF, -2px 0 #00FFFF; }
+  98% { text-shadow: none; }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   THEME 8 — LUX  (luxury dark gold — premium feel)
+════════════════════════════════════════════════════════════════ */
+#login-page[data-ltheme="lux"] {
+  background: #0A0800;
+}
+
+#login-page[data-ltheme="lux"] .lp-blob-1 {
+  background: radial-gradient(circle, #B8860B 0%, rgba(184,134,11,0) 70%);
+  opacity: 0.20;
+  width: 550px; height: 550px;
+  top: -120px; left: -80px;
+  animation: lux-drift1 16s ease-in-out infinite alternate;
+}
+#login-page[data-ltheme="lux"] .lp-blob-2 {
+  background: radial-gradient(circle, #FFD700 0%, rgba(255,215,0,0) 70%);
+  opacity: 0.12;
+  width: 700px; height: 700px;
+  bottom: -180px; right: -100px;
+  animation: lux-drift2 20s ease-in-out infinite alternate;
+}
+
+/* Gold particles */
+#login-page[data-ltheme="lux"]::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    radial-gradient(1px 1px at 15% 25%, rgba(255,215,0,0.7) 0%, transparent 100%),
+    radial-gradient(1px 1px at 42% 68%, rgba(255,215,0,0.5) 0%, transparent 100%),
+    radial-gradient(1px 1px at 72% 15%, rgba(255,215,0,0.6) 0%, transparent 100%),
+    radial-gradient(1px 1px at 88% 55%, rgba(255,215,0,0.4) 0%, transparent 100%),
+    radial-gradient(1px 1px at 30% 85%, rgba(255,215,0,0.5) 0%, transparent 100%),
+    radial-gradient(1px 1px at 60% 40%, rgba(255,215,0,0.3) 0%, transparent 100%),
+    radial-gradient(1px 1px at 80% 80%, rgba(255,215,0,0.6) 0%, transparent 100%);
+  animation: lux-stars 8s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+#login-page[data-ltheme="lux"] .lp-card {
+  background: rgba(10,8,0,0.92);
+  border: 1px solid rgba(184,134,11,0.35);
+  box-shadow:
+    0 0 0 1px rgba(255,215,0,0.06),
+    0 24px 80px rgba(0,0,0,0.9),
+    inset 0 1px 0 rgba(255,215,0,0.10);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+}
+#login-page[data-ltheme="lux"] .lp-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 10%; right: 10%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #FFD700, transparent);
+  animation: lux-shimmer 3s ease-in-out infinite;
+}
+#login-page[data-ltheme="lux"] .lp-app-name {
+  background: linear-gradient(135deg, #B8860B 0%, #FFD700 50%, #B8860B 100%);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: lux-gold-shine 3s linear infinite;
+  letter-spacing: 0.04em;
+}
+#login-page[data-ltheme="lux"] .form-control {
+  background: rgba(255,215,0,0.04);
+  border-color: rgba(184,134,11,0.25);
+  color: #FFE87C;
+}
+#login-page[data-ltheme="lux"] .form-control:focus {
+  border-color: rgba(255,215,0,0.55);
+  box-shadow: 0 0 0 3px rgba(255,215,0,0.10);
+}
+#login-page[data-ltheme="lux"] .form-control::placeholder { color: rgba(255,215,0,0.3); }
+#login-page[data-ltheme="lux"] .lp-submit-btn {
+  background: linear-gradient(135deg, #B8860B, #FFD700, #B8860B);
+  background-size: 200% 100%;
+  color: #0A0800;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  border: none;
+  animation: lux-btn-shine 3s linear infinite;
+  box-shadow: 0 4px 24px rgba(255,215,0,0.25);
+}
+#login-page[data-ltheme="lux"] .lp-submit-btn:hover {
+  box-shadow: 0 4px 32px rgba(255,215,0,0.50);
+  transform: translateY(-1px);
+}
+#login-page[data-ltheme="lux"] .lp-tab-btn.active {
+  color: #FFD700;
+  border-bottom-color: #FFD700;
+}
+
+@keyframes lux-drift1 {
+  0%   { transform: translate(0,0) scale(1); }
+  100% { transform: translate(30px, 20px) scale(1.1); }
+}
+@keyframes lux-drift2 {
+  0%   { transform: translate(0,0) scale(1); }
+  100% { transform: translate(-20px, -30px) scale(1.08); }
+}
+@keyframes lux-stars {
+  0%   { opacity: 0.6; transform: scale(1); }
+  100% { opacity: 1;   transform: scale(1.02); }
+}
+@keyframes lux-shimmer {
+  0%,100% { opacity: 0.2; }
+  50%      { opacity: 0.8; }
+}
+@keyframes lux-gold-shine {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+@keyframes lux-btn-shine {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+
+/* ── Preview cards (Settings picker) ────────────────────────── */
+.ltheme-preview--cyber {
+  background: #000;
+  overflow: hidden;
+  position: relative;
+}
+.ltheme-preview--cyber::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,255,255,.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,255,255,.08) 1px, transparent 1px);
+  background-size: 10px 10px;
+}
+.ltp-card-cyber {
+  background: rgba(0,0,0,0.85);
+  border: 1px solid rgba(0,255,255,0.4);
+  box-shadow: 0 0 12px rgba(0,255,255,0.15), 0 0 24px rgba(255,0,255,0.08);
+}
+.ltheme-preview--lux {
+  background: #0A0800;
+  position: relative;
+  overflow: hidden;
+}
+.ltheme-preview--lux::before {
+  content: '';
+  position: absolute;
+  top: 30%; left: -50%; right: -50%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #FFD700, transparent);
+  animation: lux-shimmer 2s ease-in-out infinite;
+}
+.ltp-card-lux {
+  background: rgba(10,8,0,0.92);
+  border: 1px solid rgba(184,134,11,0.40);
+  box-shadow: 0 0 12px rgba(255,215,0,0.10);
+}
+
 .ltheme-label {
   display: block;
   padding: 7px 8px;

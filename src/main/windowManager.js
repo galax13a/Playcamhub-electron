@@ -103,7 +103,10 @@ function createWindow(serverPort) {
 
   _lockdown(mainWindow);
 
-  mainWindow.once('ready-to-show', () => mainWindow.show());
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.maximize();
+    mainWindow.show();
+  });
   mainWindow.on('maximize',   () => mainWindow.webContents.send('window:maximized', true));
   mainWindow.on('unmaximize', () => mainWindow.webContents.send('window:maximized', false));
   mainWindow.on('closed',     () => { mainWindow = null; });

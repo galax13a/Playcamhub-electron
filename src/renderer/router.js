@@ -7,6 +7,7 @@ import { renderSettings  } from './components/Settings.js';
 
 // ── Core views (always available) ────────────────────────────────────────────
 const CORE_VIEWS = {
+  home:      { el: 'view-dashboard', render: renderDashboard },
   dashboard: { el: 'view-dashboard', render: renderDashboard },
   settings:  { el: 'view-settings',  render: renderSettings  },
 };
@@ -82,6 +83,6 @@ export function initRouter() {
     }
   });
 
-  // Start on dashboard
-  showView('dashboard');
+  // Start on home dashboard
+  showView('home');
 }

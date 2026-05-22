@@ -10,7 +10,13 @@ async function request(method, path, body) {
   if (body !== undefined) opts.body = JSON.stringify(body);
   const res = await fetch(`${BASE}/api${path}`, opts);
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  if (!res.ok) {
+    const err = new Error(data.error || `HTTP ${res.status}`);
+    err.status = res.status;
+    err.fields = data.fields || null;
+    err.form   = data.form   || null;
+    throw err;
+  }
   return data;
 }
 
@@ -71,10 +77,13 @@ const API = {
     updateProfile: (d)        => request('PUT', '/auth/profile', d),
   },
 
-  // Plugin management
+  // Plugin management + per-plugin DB settings (prefix plugin_{id}_ in settings table)
   plugins: {
-    list:      ()           => request('GET',  '/plugins'),
-    setEnabled:(id, enabled)=> request('PUT',  `/plugins/${id}`, { enabled }),
+    list:       ()              => request('GET',  '/plugins'),
+    setEnabled: (id, enabled)   => request('PUT',  `/plugins/${id}`, { enabled }),
+    getSettings:(id)            => request('GET',  `/plugins/${id}/settings`),
+    setSetting: (id, key, val)  => request('POST', `/plugins/${id}/settings`, { key, value: String(val) }),
+    setSettings:(id, obj)       => request('POST', `/plugins/${id}/settings`, { settings: obj }),
   },
 
   // Contacts plugin

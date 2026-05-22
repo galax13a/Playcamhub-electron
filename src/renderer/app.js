@@ -1,6 +1,7 @@
 import API            from './utils/api.js';
 import store          from './store.js';
 import PluginRegistry from './core/PluginRegistry.js';
+import { initErrorHandler, logError } from './utils/errorHandler.js';
 
 // CSP-compliant global image error handler (replaces inline onerror attributes)
 document.addEventListener('error', (e) => {
@@ -19,6 +20,8 @@ import { initPlayer  } from './components/Player.js';
 import { initModal, showToast } from './components/Modal.js';
 
 async function boot() {
+  initErrorHandler();
+
   // 1. Get server port from Electron IPC
   if (window.electronAPI) {
     const port = await window.electronAPI.getServerPort();
@@ -123,7 +126,7 @@ function wireKeyboard() {
         if (e.ctrlKey || e.metaKey) { e.preventDefault(); store.prevSong(); }
         break;
       case 'KeyF':
-        if (e.ctrlKey || e.metaKey) { e.preventDefault(); store.navigate('search'); }
+        if (e.ctrlKey || e.metaKey) { e.preventDefault(); store.navigate('starcho:youtube'); }
         break;
     }
   });
@@ -134,10 +137,12 @@ function wireKeyboard() {
 window.addEventListener('user:login', async (e) => {
   store.setState({ loggedUser: e.detail });
   await store.loadUserProfile();
-  store.navigate(store.state.currentView || 'home');
+  const lastView = (() => { try { return localStorage.getItem('last_view'); } catch (_) { return null; } })();
+  store.navigate(lastView || 'home');
 });
 
 boot().catch(err => {
+  logError(err);
   console.error('StarchoElectron boot failed:', err);
   document.getElementById('app').innerHTML = `
     <div style="color:#fff;background:#0a0a0a;height:100vh;display:flex;align-items:center;

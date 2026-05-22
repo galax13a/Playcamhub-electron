@@ -374,7 +374,6 @@ let _lang = 'en';
 export function setLang(lang) {
   if (!T[lang]) return;
   _lang = lang;
-  EventBus.emit('lang:change', lang);
 }
 
 export function getLang() { return _lang; }
@@ -395,9 +394,11 @@ export const THEMES = [
   { id: 'matrix',   label: 'Matrix',      icon: '💊', colors: ['#000000','#00FF41','#003311'] },
   { id: 'winamp',   label: 'WinAmp',      icon: '🎵', colors: ['#1c1c1c','#00b4d8','#0077b6'] },
   { id: 'rickmorty',label: 'Rick & Morty',icon: '🚀', colors: ['#06090f','#39ff14','#a29bfe'] },
-  { id: 'kick',      label: 'Kick',        icon: '🟢', colors: ['#070d07','#53FC18','#2ECC71'] },
+  { id: 'kick',     label: 'Kick',        icon: '🟢', colors: ['#070d07','#53FC18','#2ECC71'] },
   { id: 'pink',     label: 'Pink',        icon: '🌸', colors: ['#0D0408','#FF2D78','#FF80C8'] },
   { id: 'red',      label: 'Red',         icon: '🔴', colors: ['#090202','#FF1744','#FF5252'] },
   { id: 'military', label: 'Military',    icon: '🎖', colors: ['#0B0C07','#8FA820','#C8A84B'] },
   { id: 'arcade',   label: 'Arcade',      icon: '🕹', colors: ['#05020F','#FFD700','#FF6B6B'] },
+  { id: 'neon',     label: 'Neon',        icon: '⚡', colors: ['#030012','#FF00FF','#00FFFF'] },
+  { id: 'ocean',    label: 'Ocean',       icon: '🌊', colors: ['#010C1A','#00B4D8','#0077B6'] },
 ];

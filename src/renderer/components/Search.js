@@ -1,238 +1,225 @@
 'use strict';
-import store    from '../store.js';
 import API      from '../utils/api.js';
-import { renderCards } from './Library.js';
 import { showToast } from './Modal.js';
 import { sanitizeHTML } from '../utils/formatters.js';
 
-export async function renderSearch(el) {
+// ── YouTube Dashboard ─────────────────────────────────────────────────────────
+
+export async function renderYouTubeDashboard(el) {
   el.innerHTML = `
     <div class="topbar">
-      <span class="topbar-title">🔍 Búsqueda</span>
+      <span class="topbar-title">📥 YouTube</span>
+      <div class="yt-dash-stats" id="yt-stats"></div>
+      <button class="btn btn-ghost btn-sm" id="yt-clear-btn" title="Limpiar completadas">🗑 Limpiar</button>
     </div>
-    <div class="search-tabs">
-      <button class="search-tab active" data-tab="youtube">🌐 YouTube</button>
-      <button class="search-tab"        data-tab="local">💾 Local</button>
-    </div>
-    <div id="search-tab-youtube" class="search-tab-panel">
-      ${_buildYouTubePanel()}
-    </div>
-    <div id="search-tab-local" class="search-tab-panel" style="display:none">
-      ${_buildLocalPanel()}
+
+    <div class="yt-dash-body">
+
+      <!-- URL input -->
+      <div class="yt-dash-input-card">
+        <div class="yt-dash-input-label">Pega la URL del video o playlist de YouTube</div>
+        <div class="yt-dash-input-row">
+          <span class="yt-dash-url-icon">🔗</span>
+          <input class="yt-dash-url-input" id="yt-url-input"
+                 placeholder="https://youtube.com/watch?v=…"
+                 autocomplete="off" spellcheck="false">
+          <button class="btn btn-primary" id="yt-preview-btn">Vista previa</button>
+        </div>
+        <div id="yt-preview" class="yt-dash-preview"></div>
+      </div>
+
+      <!-- Download queue -->
+      <div class="yt-dash-queue-card">
+        <div class="yt-dash-queue-header">
+          <span class="yt-dash-queue-title">Cola de descarga</span>
+          <span class="yt-dash-badge" id="yt-queue-badge">0</span>
+        </div>
+        <div id="yt-queue-list" class="yt-dash-queue-list">
+          <div class="yt-dash-empty">Cola vacía — pega una URL arriba para empezar</div>
+        </div>
+      </div>
+
     </div>`;
 
-  // Tab switching
-  el.querySelectorAll('.search-tab').forEach(btn => {
-    btn.addEventListener('click', () => {
-      el.querySelectorAll('.search-tab').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      const tab = btn.dataset.tab;
-      el.querySelector('#search-tab-youtube').style.display = tab === 'youtube' ? '' : 'none';
-      el.querySelector('#search-tab-local').style.display   = tab === 'local'   ? '' : 'none';
-      if (tab === 'local') el.querySelector('#local-input')?.focus();
-    });
-  });
-
-  _bindYouTube(el);
-  _bindLocal(el);
-}
-
-// ── YouTube tab ───────────────────────────────────────────────────────────────
-
-function _buildYouTubePanel() {
-  return `
-    <div class="yt-panel">
-      <div class="yt-input-row">
-        <div class="topbar-search" style="flex:1">
-          <span class="search-icon">🔗</span>
-          <input id="yt-url-input" placeholder="Pega la URL de YouTube…" autocomplete="off">
-        </div>
-        <button class="btn btn-secondary btn-sm" id="yt-info-btn">Vista previa</button>
-      </div>
-      <div id="yt-preview" class="yt-preview"></div>
-      <div id="yt-queue-section">
-        <div class="yt-queue-header">
-          <span>Cola de descarga</span>
-          <button class="btn btn-ghost btn-sm" id="yt-clear-btn">Limpiar</button>
-        </div>
-        <div id="yt-queue-list" class="yt-queue-list"></div>
-      </div>
-    </div>`;
-}
-
-function _bindYouTube(el) {
   const urlInput  = el.querySelector('#yt-url-input');
-  const infoBtn   = el.querySelector('#yt-info-btn');
-  const preview   = el.querySelector('#yt-preview');
-  const clearBtn  = el.querySelector('#yt-clear-btn');
+  const previewBtn = el.querySelector('#yt-preview-btn');
+  const previewEl  = el.querySelector('#yt-preview');
+  const clearBtn   = el.querySelector('#yt-clear-btn');
 
-  let _previewUrl = null;
+  // ── Preview ───────────────────────────────────────────────────────────────
 
-  infoBtn.addEventListener('click', async () => {
-    const url = urlInput.value.trim();
-    if (!url) return;
-    infoBtn.disabled = true;
-    infoBtn.textContent = '⏳ Cargando…';
-    preview.innerHTML = '';
-    try {
-      // Use yt-dlp via backend: add with format 'info' trick — actually we do a preview
-      // by calling info through the backend. For now show the URL and download buttons.
-      _previewUrl = url;
-      preview.innerHTML = _previewHtml(url);
-      _bindPreviewBtns(el, url);
-    } catch (err) {
-      preview.innerHTML = `<div class="yt-error">Error: ${sanitizeHTML(err.message)}</div>`;
-    } finally {
-      infoBtn.disabled = false;
-      infoBtn.textContent = 'Vista previa';
-    }
+  previewBtn.addEventListener('click', () => _loadPreview(urlInput.value.trim(), previewEl, el));
+
+  urlInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') previewBtn.click();
   });
 
-  urlInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') infoBtn.click();
-  });
-
-  // Paste auto-trigger
+  // Auto-trigger on paste
   urlInput.addEventListener('paste', () => {
     setTimeout(() => {
-      if (urlInput.value.trim().startsWith('http')) infoBtn.click();
-    }, 50);
+      const v = urlInput.value.trim();
+      if (v.startsWith('http')) _loadPreview(v, previewEl, el);
+    }, 60);
   });
+
+  // ── Clear ─────────────────────────────────────────────────────────────────
 
   clearBtn.addEventListener('click', async () => {
     await API.downloads.clearFinished().catch(() => {});
+    showToast('Cola limpiada', 'success');
     _refreshQueue(el);
   });
 
-  _refreshQueue(el);
+  // ── Initial queue load + auto-refresh ────────────────────────────────────
 
-  // Auto-refresh queue every 3 s while tab is shown
-  const timer = setInterval(() => {
-    if (el.querySelector('#search-tab-youtube')?.style.display !== 'none') {
-      _refreshQueue(el);
-    }
-  }, 3000);
+  await _refreshQueue(el);
 
-  // Clean up timer when the view is replaced
-  const observer = new MutationObserver(() => {
-    if (!document.contains(el)) { clearInterval(timer); observer.disconnect(); }
+  const timer = setInterval(() => _refreshQueue(el), 3000);
+
+  const obs = new MutationObserver(() => {
+    if (!document.contains(el)) { clearInterval(timer); obs.disconnect(); }
   });
-  observer.observe(document.body, { childList: true, subtree: true });
+  obs.observe(document.body, { childList: true, subtree: true });
 }
 
-function _previewHtml(url) {
-  const safe = sanitizeHTML(url);
-  // Extract video ID for thumbnail preview
-  const m = url.match(/(?:v=|youtu\.be\/)([A-Za-z0-9_-]{11})/);
-  const thumb = m
-    ? `<img class="yt-prev-thumb" src="https://img.youtube.com/vi/${m[1]}/mqdefault.jpg" alt="" loading="lazy">`
-    : '<div class="yt-prev-thumb yt-prev-thumb-ph">📺</div>';
+// ── Preview ───────────────────────────────────────────────────────────────────
 
-  return `
-    <div class="yt-preview-card">
-      ${thumb}
-      <div class="yt-prev-info">
-        <div class="yt-prev-url">${safe}</div>
-        <div class="yt-prev-actions">
-          <button class="btn btn-primary btn-sm" id="dl-mp3">⬇ MP3</button>
-          <button class="btn btn-secondary btn-sm" id="dl-mp4">🎬 Video MP4</button>
+async function _loadPreview(url, previewEl, rootEl) {
+  if (!url) return;
+  previewEl.innerHTML = `<div class="yt-dash-preview-loading">⏳ Cargando vista previa…</div>`;
+
+  try {
+    const m     = url.match(/(?:v=|youtu\.be\/)([A-Za-z0-9_-]{11})/);
+    const vidId = m ? m[1] : null;
+    const thumb = vidId
+      ? `<img class="yt-dash-thumb" src="https://img.youtube.com/vi/${vidId}/mqdefault.jpg"
+              alt="" loading="lazy">`
+      : `<div class="yt-dash-thumb yt-dash-thumb-ph">📺</div>`;
+
+    previewEl.innerHTML = `
+      <div class="yt-dash-prev-card">
+        ${thumb}
+        <div class="yt-dash-prev-info">
+          <div class="yt-dash-prev-url">${sanitizeHTML(url)}</div>
+          <div class="yt-dash-prev-hint">Selecciona el formato de descarga:</div>
+          <div class="yt-dash-prev-actions">
+            <button class="btn btn-primary" id="dl-mp3">
+              🎵 Solo audio (MP3)
+            </button>
+            <button class="btn btn-secondary" id="dl-mp4">
+              🎬 Video (MP4)
+            </button>
+          </div>
         </div>
-      </div>
-    </div>`;
+      </div>`;
+
+    rootEl.querySelector('#dl-mp3')?.addEventListener('click', () => _download(url, 'audio', previewEl, rootEl));
+    rootEl.querySelector('#dl-mp4')?.addEventListener('click', () => _download(url, 'video', previewEl, rootEl));
+  } catch (err) {
+    previewEl.innerHTML = `<div class="yt-dash-error">Error: ${sanitizeHTML(err.message)}</div>`;
+  }
 }
 
-function _bindPreviewBtns(el, url) {
-  el.querySelector('#dl-mp3')?.addEventListener('click', () => _download(el, url, 'audio'));
-  el.querySelector('#dl-mp4')?.addEventListener('click', () => _download(el, url, 'video'));
-}
+// ── Download ──────────────────────────────────────────────────────────────────
 
-async function _download(el, url, format) {
-  const btn = el.querySelector(format === 'audio' ? '#dl-mp3' : '#dl-mp4');
-  if (btn) { btn.disabled = true; btn.textContent = '⏳ Agregando…'; }
+async function _download(url, format, previewEl, rootEl) {
+  const mp3Btn = rootEl.querySelector('#dl-mp3');
+  const mp4Btn = rootEl.querySelector('#dl-mp4');
+  if (mp3Btn) mp3Btn.disabled = true;
+  if (mp4Btn) mp4Btn.disabled = true;
+
   try {
     await API.downloads.add(url, format);
-    showToast('Descarga iniciada', 'success');
-    el.querySelector('#yt-url-input').value = '';
-    el.querySelector('#yt-preview').innerHTML = '';
-    _refreshQueue(el);
+    rootEl.querySelector('#yt-url-input').value = '';
+    previewEl.innerHTML = '';
+    showToast('Descarga agregada a la cola', 'success');
+    await _refreshQueue(rootEl);
   } catch (err) {
-    showToast(`Error: ${err.message}`, 'error');
+    showToast(err.message || 'Error al agregar descarga', 'error');
   } finally {
-    if (btn) { btn.disabled = false; btn.textContent = format === 'audio' ? '⬇ MP3' : '🎬 Video MP4'; }
+    if (mp3Btn) mp3Btn.disabled = false;
+    if (mp4Btn) mp4Btn.disabled = false;
   }
 }
+
+// ── Queue refresh ─────────────────────────────────────────────────────────────
+
+const STATUS_ICON = {
+  pending:     '⏳',
+  downloading: '⬇️',
+  completed:   '✅',
+  failed:      '❌',
+};
+
+const STATUS_LABEL = {
+  pending:     'En espera',
+  downloading: 'Descargando',
+  completed:   'Completado',
+  failed:      'Error',
+};
 
 async function _refreshQueue(el) {
-  const listEl = el.querySelector('#yt-queue-list');
+  const listEl  = el.querySelector('#yt-queue-list');
+  const statsEl = el.querySelector('#yt-stats');
+  const badgeEl = el.querySelector('#yt-queue-badge');
   if (!listEl) return;
-  try {
-    const items = await API.downloads.list();
-    if (!items.length) {
-      listEl.innerHTML = '<div class="yt-empty">Cola vacía</div>';
-      return;
-    }
-    listEl.innerHTML = items.map(item => {
-      const icon = { pending: '⏳', downloading: '⬇', completed: '✅', failed: '❌' }[item.status] || '⏳';
-      const pct  = item.status === 'downloading' ? `${Math.round(item.progress || 0)}%` : '';
-      return `
-        <div class="yt-q-row" data-id="${item.id}">
-          <span class="yt-q-icon">${icon}</span>
-          <div class="yt-q-info">
-            <div class="yt-q-title">${sanitizeHTML(item.title || item.youtube_url)}</div>
-            <div class="yt-q-meta">${item.format === 'video' ? '🎬 MP4' : '🎵 MP3'} ${pct}</div>
-          </div>
-          <button class="btn-ghost btn-icon yt-q-del" data-id="${item.id}" title="Eliminar">✕</button>
-        </div>`;
-    }).join('');
 
-    listEl.querySelectorAll('.yt-q-del').forEach(btn => {
-      btn.addEventListener('click', async (e) => {
-        e.stopPropagation();
-        const id = parseInt(btn.dataset.id);
-        await API.downloads.remove(id).catch(() => {});
-        _refreshQueue(el);
-      });
-    });
-  } catch (_) {}
-}
+  let items = [];
+  try { items = await API.downloads.list(); } catch (_) { return; }
 
-// ── Local tab ─────────────────────────────────────────────────────────────────
+  // Update stats pills
+  if (statsEl) {
+    const counts = {
+      pending:     items.filter(i => i.status === 'pending').length,
+      downloading: items.filter(i => i.status === 'downloading').length,
+      completed:   items.filter(i => i.status === 'completed').length,
+      failed:      items.filter(i => i.status === 'failed').length,
+    };
+    statsEl.innerHTML = [
+      counts.downloading ? `<span class="yt-stat-pill yt-stat-dl">⬇️ ${counts.downloading} descargando</span>` : '',
+      counts.pending     ? `<span class="yt-stat-pill yt-stat-pending">⏳ ${counts.pending} en espera</span>` : '',
+      counts.completed   ? `<span class="yt-stat-pill yt-stat-done">✅ ${counts.completed} listas</span>` : '',
+      counts.failed      ? `<span class="yt-stat-pill yt-stat-fail">❌ ${counts.failed} error</span>` : '',
+    ].filter(Boolean).join('');
+  }
 
-function _buildLocalPanel() {
-  return `
-    <div style="padding:20px 24px 0">
-      <div class="topbar-search" style="max-width:600px;margin-bottom:20px">
-        <span class="search-icon">🔍</span>
-        <input id="local-input" placeholder="Busca en tu biblioteca…" autocomplete="off">
-      </div>
-      <div id="local-results"></div>
-    </div>`;
-}
+  if (badgeEl) badgeEl.textContent = items.length;
 
-function _bindLocal(el) {
-  let timer = null;
-  const input   = el.querySelector('#local-input');
-  const results = el.querySelector('#local-results');
-
-  input.addEventListener('input', () => {
-    clearTimeout(timer);
-    const q = input.value.trim();
-    if (!q) { results.innerHTML = ''; return; }
-    timer = setTimeout(() => _doLocalSearch(q, results), 300);
-  });
-}
-
-function _doLocalSearch(q, results) {
-  const lq = q.toLowerCase();
-  const matches = store.state.songs.filter(s =>
-    s.title.toLowerCase().includes(lq) ||
-    (s.artist || '').toLowerCase().includes(lq) ||
-    (s.album  || '').toLowerCase().includes(lq)
-  );
-  if (!matches.length) {
-    results.innerHTML = `<div class="empty-state"><div class="empty-icon">🔍</div><h3>Sin resultados</h3></div>`;
+  if (!items.length) {
+    listEl.innerHTML = `<div class="yt-dash-empty">Cola vacía — pega una URL arriba para empezar</div>`;
     return;
   }
-  results.innerHTML = '<div class="songs-grid"></div>';
-  renderCards(results.querySelector('.songs-grid'), matches);
+
+  listEl.innerHTML = items.map(item => {
+    const icon  = STATUS_ICON[item.status]  || '⏳';
+    const label = STATUS_LABEL[item.status] || item.status;
+    const pct   = item.status === 'downloading' ? Math.round(item.progress || 0) : null;
+    const fmt   = item.format === 'video' ? '🎬 MP4' : '🎵 MP3';
+    const isDone = item.status === 'completed' || item.status === 'failed';
+
+    return `
+      <div class="yt-dash-item ${item.status}" data-id="${item.id}">
+        <div class="yt-dash-item-icon">${icon}</div>
+        <div class="yt-dash-item-body">
+          <div class="yt-dash-item-title">${sanitizeHTML(item.title || item.youtube_url)}</div>
+          <div class="yt-dash-item-meta">
+            <span class="yt-fmt-badge">${fmt}</span>
+            <span class="yt-status-label">${label}${pct !== null ? ` · ${pct}%` : ''}</span>
+          </div>
+          ${pct !== null ? `
+            <div class="yt-progress-track">
+              <div class="yt-progress-fill" style="width:${pct}%"></div>
+            </div>` : ''}
+        </div>
+        ${isDone ? `<button class="yt-dash-del" data-id="${item.id}" title="Eliminar">✕</button>` : ''}
+      </div>`;
+  }).join('');
+
+  listEl.querySelectorAll('.yt-dash-del').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      await API.downloads.remove(parseInt(btn.dataset.id)).catch(() => {});
+      _refreshQueue(el);
+    });
+  });
 }

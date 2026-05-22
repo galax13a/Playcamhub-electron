@@ -1,8 +1,8 @@
 'use strict';
 import store           from '../store.js';
 import EventBus        from '../utils/eventBus.js';
-import { t }           from '../utils/i18n.js';
 import PluginRegistry  from '../core/PluginRegistry.js';
+import { openProfileModal } from './Modal.js';
 
 const DEFAULT_AVATAR = `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><circle cx='32' cy='32' r='32' fill='%23333'/><circle cx='32' cy='24' r='12' fill='%23666'/><ellipse cx='32' cy='56' rx='20' ry='14' fill='%23666'/></svg>`;
 
@@ -12,14 +12,9 @@ export function initSidebar(el) {
   _el = el;
   _rebuild(el);
 
-  EventBus.on('store:currentView', (view) => {
-    el.querySelectorAll('.nav-item').forEach(item =>
-      item.classList.toggle('active', item.dataset.view === view)
-    );
-  });
-
-  EventBus.on('plugins:ready', () => _rebuild(el));
-  EventBus.on('lang:change',   () => _rebuild(el));
+  EventBus.on('store:currentView', () => _highlightActive(el));
+  EventBus.on('plugins:ready',     () => _rebuild(el));
+  EventBus.on('lang:change',       () => _rebuild(el));
 
   EventBus.on('store:settings', (s) => {
     const avatarEl = el.querySelector('.sb-avatar');
@@ -34,6 +29,20 @@ export function initSidebar(el) {
 function _rebuild(el) {
   el.innerHTML = _html(store.state.settings || {});
   _bind(el);
+  _highlightActive(el);
+}
+
+function _highlightActive(el) {
+  const cur = store.state.currentView;
+  el.querySelectorAll('.nav-item').forEach(item =>
+    item.classList.toggle('active', item.dataset.view === cur)
+  );
+}
+
+function _navItem(n, cur) {
+  return `<a class="nav-item ${cur === n.view ? 'active' : ''}" data-view="${n.view}" role="button" tabindex="0">
+    <span class="nav-icon">${n.icon}</span><span>${n.label}</span>
+  </a>`;
 }
 
 function _html(s = {}) {
@@ -43,21 +52,18 @@ function _html(s = {}) {
   const pluginNav   = PluginRegistry.getNavItems();
   const cur         = store.state.currentView;
 
-  const pluginItems = pluginNav.length
-    ? pluginNav.map(n => {
-        const label = t(n.label) !== n.label ? t(n.label) : n.label;
-        return `<a class="nav-item ${cur === n.view ? 'active' : ''}" data-view="${n.view}" role="button" tabindex="0">
-          <span class="nav-icon">${n.icon}</span><span>${label}</span>
-        </a>`;
-      }).join('')
-    : `<div class="sb-empty">Sin módulos activos</div>`;
+  // starcho items (music) come first, other plugins after a divider
+  const musicItems  = pluginNav.filter(n => n.view.startsWith('starcho:'));
+  const moduleItems = pluginNav.filter(n => !n.view.startsWith('starcho:'));
 
-  const footerLinks = [
-    { view: 'dashboard', icon: '🏠', label: t('dashboard') || 'Inicio' },
-    { view: 'settings',  icon: '⚙️',  label: t('settings')  || 'Configuración' },
-  ].map(n => `<a class="nav-item ${cur === n.view ? 'active' : ''}" data-view="${n.view}" role="button" tabindex="0">
-      <span class="nav-icon">${n.icon}</span><span>${n.label}</span>
-    </a>`).join('');
+  const musicHtml = musicItems.map(n => _navItem(n, cur)).join('');
+
+  const modulesHtml = moduleItems.length
+    ? `<div class="nav-section-label">Módulos</div>
+       ${moduleItems.map(n => _navItem(n, cur)).join('')}`
+    : '';
+
+  const settingsHtml = _navItem({ view: 'settings', icon: '⚙️', label: 'Configuración' }, cur);
 
   return `
     <div class="sidebar-logo">
@@ -80,14 +86,15 @@ function _html(s = {}) {
       </div>
     </div>
 
-    <nav class="sidebar-nav" id="sidebar-plugin-nav">
-      ${pluginItems}
+    <nav class="sidebar-nav" id="sidebar-nav">
+      ${_navItem({ view: 'home', icon: '🏠', label: 'Inicio' }, cur)}
+      ${musicHtml ? `<div class="nav-separator"></div>${musicHtml}` : ''}
+      ${modulesHtml ? `<div class="nav-separator"></div>${modulesHtml}` : ''}
+      <div class="nav-separator"></div>
+      ${settingsHtml}
     </nav>
 
     <div class="sidebar-footer">
-      <nav class="sidebar-nav-footer">
-        ${footerLinks}
-      </nav>
       <div class="sidebar-user" id="sidebar-user">
         <img class="sb-avatar" src="${s.avatar || DEFAULT_AVATAR}" alt="avatar">
         <div class="sb-user-info">
@@ -109,7 +116,11 @@ function _bind(el) {
     item.addEventListener('click', () => store.navigate(item.dataset.view));
   });
 
-  el.querySelector('#sidebar-user')?.addEventListener('click', () => store.navigate('settings'));
+  // Clicking the user row opens the profile popup; logout button is handled separately
+  el.querySelector('#sidebar-user')?.addEventListener('click', (e) => {
+    if (e.target.closest('#btn-logout')) return; // let logout button handle itself
+    openProfileModal();
+  });
 
   el.querySelector('#btn-logout')?.addEventListener('click', (e) => {
     e.stopPropagation();

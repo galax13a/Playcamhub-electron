@@ -1,5 +1,5 @@
 import API        from '../../../../src/renderer/utils/api.js';
-import { openModal, showToast } from '../../../../src/renderer/components/Modal.js';
+import { openModal, showToast, markFieldErrors, clearFieldErrors } from '../../../../src/renderer/components/Modal.js';
 import store from '../../../../src/renderer/store.js';
 
 const STATUS_META = {
@@ -159,33 +159,33 @@ function _openForm(contact, onSaved) {
     content: `
       <div class="form-group">
         <label>Nombre *</label>
-        <input class="form-control" id="cf-name" placeholder="Nombre completo"
+        <input class="form-control" id="cf-name" data-field="name" placeholder="Nombre completo"
                value="${_esc(c.name || '')}">
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
         <div class="form-group">
           <label>Empresa</label>
-          <input class="form-control" id="cf-company" placeholder="Empresa S.A."
+          <input class="form-control" id="cf-company" data-field="company" placeholder="Empresa S.A."
                  value="${_esc(c.company || '')}">
         </div>
         <div class="form-group">
           <label>Estado</label>
-          <select class="form-control" id="cf-status">${statusOpts}</select>
+          <select class="form-control" id="cf-status" data-field="status">${statusOpts}</select>
         </div>
         <div class="form-group">
           <label>Email</label>
-          <input class="form-control" id="cf-email" type="email" placeholder="correo@ejemplo.com"
+          <input class="form-control" id="cf-email" data-field="email" type="email" placeholder="correo@ejemplo.com"
                  value="${_esc(c.email || '')}">
         </div>
         <div class="form-group">
           <label>Teléfono</label>
-          <input class="form-control" id="cf-phone" placeholder="+1 555 000 0000"
+          <input class="form-control" id="cf-phone" data-field="phone" placeholder="+1 555 000 0000"
                  value="${_esc(c.phone || '')}">
         </div>
       </div>
       <div class="form-group">
         <label>Notas</label>
-        <textarea class="form-control" id="cf-notes" rows="3" style="resize:vertical"
+        <textarea class="form-control" id="cf-notes" data-field="notes" rows="3" style="resize:vertical"
           placeholder="Información adicional…">${_esc(c.notes || '')}</textarea>
       </div>
       <div class="form-group" style="display:flex;align-items:center;gap:10px;margin-top:4px">
@@ -200,12 +200,11 @@ function _openForm(contact, onSaved) {
       {
         label: isEdit ? 'Guardar' : 'Crear',
         class: 'btn-primary',
-        action: async (close) => {
-          const name = document.getElementById('cf-name').value.trim();
-          if (!name) { document.getElementById('cf-name').focus(); return; }
+        action: async (close, formEl) => {
+          clearFieldErrors(formEl);
           const username = store.state.loggedUser?.username;
           const payload = {
-            name,
+            name:    document.getElementById('cf-name').value.trim(),
             company: document.getElementById('cf-company').value.trim() || null,
             email:   document.getElementById('cf-email').value.trim()   || null,
             phone:   document.getElementById('cf-phone').value.trim()   || null,
@@ -214,15 +213,20 @@ function _openForm(contact, onSaved) {
             active:  document.getElementById('cf-active').checked ? 1 : 0,
             username,
           };
-          if (isEdit) {
-            await API.contacts.update(c.id, payload);
-            showToast('Contacto actualizado', 'success');
-          } else {
-            await API.contacts.create(payload);
-            showToast('Contacto creado', 'success');
+          try {
+            if (isEdit) {
+              await API.contacts.update(c.id, payload);
+              showToast('Contacto actualizado', 'success');
+            } else {
+              await API.contacts.create(payload);
+              showToast('Contacto creado', 'success');
+            }
+            close();
+            onSaved();
+          } catch (err) {
+            markFieldErrors(err.fields, formEl);
+            showToast(err.message || 'Error al guardar', 'error');
           }
-          close();
-          onSaved();
         },
       },
     ],

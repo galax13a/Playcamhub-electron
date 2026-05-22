@@ -1,5 +1,5 @@
 import API        from '../../../../src/renderer/utils/api.js';
-import { openModal, showToast } from '../../../../src/renderer/components/Modal.js';
+import { openModal, showToast, markFieldErrors, clearFieldErrors } from '../../../../src/renderer/components/Modal.js';
 import store from '../../../../src/renderer/store.js';
 
 const COLORS = ['#6366f1','#8b5cf6','#ec4899','#f59e0b','#10b981','#06b6d4','#ef4444','#64748b'];
@@ -92,16 +92,16 @@ function _openForm(note, onSaved) {
     content: `
       <div class="form-group">
         <label>Título *</label>
-        <input class="form-control" id="nt-f-title" placeholder="Título de la nota" value="${_esc(note?.title || '')}">
+        <input class="form-control" id="nt-f-title" data-field="title" placeholder="Título de la nota" value="${_esc(note?.title || '')}">
       </div>
       <div class="form-group">
         <label>Contenido</label>
-        <textarea class="form-control" id="nt-f-content" rows="5" style="resize:vertical"
+        <textarea class="form-control" id="nt-f-content" data-field="content" rows="5" style="resize:vertical"
           placeholder="Escribe aquí tu nota…">${_esc(note?.content || '')}</textarea>
       </div>
       <div class="form-group">
         <label>Fecha importante</label>
-        <input class="form-control" type="date" id="nt-f-date" value="${note?.important_date || ''}">
+        <input class="form-control" type="date" id="nt-f-date" data-field="important_date" value="${note?.important_date || ''}">
       </div>
       <div class="form-group">
         <label>Color</label>
@@ -115,25 +115,29 @@ function _openForm(note, onSaved) {
       {
         label: isEdit ? 'Guardar' : 'Crear',
         class: 'btn-primary',
-        action: async (close) => {
+        action: async (close, formEl) => {
+          clearFieldErrors(formEl);
           const title   = document.getElementById('nt-f-title').value.trim();
           const content = document.getElementById('nt-f-content').value.trim();
           const date    = document.getElementById('nt-f-date').value;
           const color   = document.getElementById('nt-f-color').value;
-          if (!title) { document.getElementById('nt-f-title').focus(); return; }
-
           const username = store.state.loggedUser?.username;
           const payload  = { title, content: content || null, color, important_date: date || null, username };
 
-          if (isEdit) {
-            await API.notes.update(note.id, payload);
-            showToast('Nota actualizada', 'success');
-          } else {
-            await API.notes.create(payload);
-            showToast('Nota creada', 'success');
+          try {
+            if (isEdit) {
+              await API.notes.update(note.id, payload);
+              showToast('Nota actualizada', 'success');
+            } else {
+              await API.notes.create(payload);
+              showToast('Nota creada', 'success');
+            }
+            close();
+            onSaved();
+          } catch (err) {
+            markFieldErrors(err.fields, formEl);
+            showToast(err.message || 'Error al guardar', 'error');
           }
-          close();
-          onSaved();
         },
       },
     ],

@@ -34,6 +34,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Open external links
   openExternal: (url) => ipcRenderer.send('app:open-external', url),
 
+  // System performance stats (CPU, RAM)
+  getSystemStats: () => ipcRenderer.invoke('system:stats'),
+
+  // Dev mode detection
+  isDev: () => ipcRenderer.invoke('app:is-dev'),
+
+  // Error log (dev only)
+  logError: (msg) => ipcRenderer.send('log:write', msg),
+  readLog:  ()    => ipcRenderer.invoke('log:read'),
+  clearLog: ()    => ipcRenderer.invoke('log:clear'),
+
   // Mini player (main renderer calls these)
   openMiniPlayer:          ()       => ipcRenderer.send('mini-player:open'),
   closeMiniPlayer:         ()       => ipcRenderer.send('mini-player:close'),

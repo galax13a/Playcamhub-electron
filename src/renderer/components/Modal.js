@@ -4,6 +4,38 @@ import API      from '../utils/api.js';
 import store    from '../store.js';
 import { t }    from '../utils/i18n.js';
 
+// ── Field error helpers ───────────────────────────────────────────────────────
+
+export function markFieldErrors(fields, containerEl) {
+  if (!fields || !containerEl) return;
+  let focusedFirst = false;
+  Object.entries(fields).forEach(([name, msgs]) => {
+    const el =
+      containerEl.querySelector(`[data-field="${name}"]`) ||
+      containerEl.querySelector(`[name="${name}"]`)       ||
+      containerEl.querySelector(`#${name}`)               ||
+      null;
+    if (!el) return;
+    el.classList.add('is-invalid');
+    el.parentElement?.querySelector('.field-error-msg')?.remove();
+    const div = document.createElement('div');
+    div.className = 'field-error-msg';
+    div.textContent = Array.isArray(msgs) ? msgs[0] : String(msgs);
+    el.insertAdjacentElement('afterend', div);
+    el.addEventListener('input', () => {
+      el.classList.remove('is-invalid');
+      el.parentElement?.querySelector('.field-error-msg')?.remove();
+    }, { once: true });
+    if (!focusedFirst) { el.focus(); focusedFirst = true; }
+  });
+}
+
+export function clearFieldErrors(containerEl) {
+  if (!containerEl) return;
+  containerEl.querySelectorAll('.is-invalid').forEach(el => el.classList.remove('is-invalid'));
+  containerEl.querySelectorAll('.field-error-msg').forEach(el => el.remove());
+}
+
 let _container = null;
 
 export function initModal() {
@@ -48,12 +80,14 @@ export function openModal({ title, content, actions = [] }) {
 
   function close() { overlay.classList.remove('open'); setTimeout(() => overlay.remove(), 220); }
 
+  const bodyEl = overlay.querySelector('.modal-body');
+
   overlay.querySelector('#modal-close-btn').onclick = close;
   overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
 
   actions.forEach((a, i) => {
     overlay.querySelector(`#modal-action-${i}`).onclick = () => {
-      if (a.action) a.action(close);
+      if (a.action) a.action(close, bodyEl);
       else close();
     };
   });
@@ -69,22 +103,28 @@ export function openNewPlaylistModal(onCreated) {
     content: `
       <div class="form-group">
         <label>${t('pl_name_label')}</label>
-        <input class="form-control" id="pl-name" placeholder="${t('pl_name_ph')}" autofocus>
+        <input class="form-control" id="pl-name" data-field="name" placeholder="${t('pl_name_ph')}" autofocus>
       </div>
       <div class="form-group">
         <label>${t('pl_desc_label')}</label>
-        <input class="form-control" id="pl-desc" placeholder="${t('pl_desc_ph')}">
+        <input class="form-control" id="pl-desc" data-field="description" placeholder="${t('pl_desc_ph')}">
       </div>`,
     actions: [
       { label: t('cancel'), class: 'btn-secondary', action: (close) => close() },
       {
         label: t('create'), class: 'btn-primary',
-        action: async (close) => {
+        action: async (close, formEl) => {
+          clearFieldErrors(formEl);
           const name = document.getElementById('pl-name').value.trim();
           if (!name) { document.getElementById('pl-name').focus(); return; }
           const desc = document.getElementById('pl-desc').value.trim();
-          close();
-          if (onCreated) await onCreated({ name, description: desc });
+          try {
+            if (onCreated) await onCreated({ name, description: desc });
+            close();
+          } catch (err) {
+            markFieldErrors(err.fields, formEl);
+            showToast(err.message || 'Error al crear playlist', 'error');
+          }
         },
       },
     ],
@@ -345,4 +385,134 @@ export function openPlayNowModal(song) {
       },
     ],
   });
+}
+
+// ── Profile edit modal ────────────────────────────────────────────────────────
+
+/**
+ * Opens a popup where the user can update their avatar, name, nickname,
+ * and WhatsApp number. Changes are persisted via API.auth.updateProfile
+ * and reflected immediately in the store + sidebar avatar.
+ */
+export function openProfileModal() {
+  const s          = store.state.settings   || {};
+  const loggedUser = store.state.loggedUser || {};
+  const DEFAULT_AV = `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><circle cx='32' cy='32' r='32' fill='%23333'/><circle cx='32' cy='24' r='12' fill='%23666'/><ellipse cx='32' cy='56' rx='20' ry='14' fill='%23666'/></svg>`;
+
+  const { close } = openModal({
+    title: '👤 Editar perfil',
+    content: `
+      <div style="display:flex;flex-direction:column;gap:18px">
+
+        <!-- Avatar row -->
+        <div style="display:flex;align-items:center;gap:16px">
+          <div style="position:relative;flex-shrink:0">
+            <img id="pm-avatar-preview" src="${s.avatar || DEFAULT_AV}"
+                 style="width:72px;height:72px;border-radius:50%;object-fit:cover;
+                        border:2px solid var(--border-strong)">
+            <label style="position:absolute;bottom:0;right:0;width:24px;height:24px;
+                          border-radius:50%;background:var(--red);display:flex;
+                          align-items:center;justify-content:center;cursor:pointer;
+                          font-size:12px;border:2px solid var(--bg-2)"
+                   title="Cambiar foto">
+              📷
+              <input type="file" id="pm-avatar-input" accept="image/*" style="display:none">
+            </label>
+          </div>
+          <div style="font-size:12px;color:var(--text-muted);line-height:1.6">
+            <strong style="color:var(--text-primary)">${_safeStr(loggedUser.username || '')}</strong><br>
+            Haz clic en el ícono de cámara para cambiar tu foto de perfil.
+          </div>
+        </div>
+
+        <!-- Fields -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <div class="form-group" style="margin:0">
+            <label style="font-size:12px;color:var(--text-muted)">Nombre completo</label>
+            <input class="form-control" id="pm-fullname" data-field="full_name"
+                   value="${_safeStr(s.full_name)}" placeholder="John Doe" style="margin-top:4px">
+          </div>
+          <div class="form-group" style="margin:0">
+            <label style="font-size:12px;color:var(--text-muted)">Apodo / Nickname</label>
+            <input class="form-control" id="pm-nickname" data-field="nickname"
+                   value="${_safeStr(s.nickname)}" placeholder="@username" style="margin-top:4px">
+          </div>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label style="font-size:12px;color:var(--text-muted)">WhatsApp</label>
+          <input class="form-control" id="pm-whatsapp" data-field="whatsapp"
+                 value="${_safeStr(s.whatsapp)}" placeholder="+1 555 000 0000" style="margin-top:4px">
+        </div>
+
+        <div id="pm-msg" style="font-size:12px;color:var(--green);display:none;margin-top:-6px">
+          ✅ Perfil guardado correctamente
+        </div>
+      </div>`,
+
+    actions: [
+      { label: 'Cancelar', class: 'btn-secondary', action: (c) => c() },
+      {
+        label: '💾 Guardar',
+        class: 'btn-primary',
+        action: async (c, bodyEl) => {
+          const full_name = bodyEl.querySelector('#pm-fullname').value.trim();
+          const nickname  = bodyEl.querySelector('#pm-nickname').value.trim();
+          const whatsapp  = bodyEl.querySelector('#pm-whatsapp').value.trim();
+          const avatar    = store.state.settings?.avatar || s.avatar || '';
+
+          try {
+            if (loggedUser?.username) {
+              await API.auth.updateProfile({ username: loggedUser.username, full_name, nickname, whatsapp, avatar });
+            }
+            const updated = { ...store.state.settings, full_name, nickname, whatsapp };
+            store.setState({ settings: updated });
+            const msgEl = bodyEl.querySelector('#pm-msg');
+            if (msgEl) { msgEl.style.display = 'block'; }
+            setTimeout(c, 1000);
+          } catch (err) {
+            showToast(`Error al guardar: ${err.message}`, 'error');
+          }
+        },
+      },
+    ],
+  });
+
+  // Wire avatar upload after modal is mounted
+  requestAnimationFrame(() => {
+    const input   = document.getElementById('pm-avatar-input');
+    const preview = document.getElementById('pm-avatar-preview');
+    if (!input || !preview) return;
+
+    input.addEventListener('change', () => {
+      const file = input.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        // Crop to square at 128×128
+        const img  = new Image();
+        img.onload = () => {
+          const canvas   = document.createElement('canvas');
+          canvas.width   = canvas.height = 128;
+          const ctx      = canvas.getContext('2d');
+          const size     = Math.min(img.width, img.height);
+          const sx       = (img.width  - size) / 2;
+          const sy       = (img.height - size) / 2;
+          ctx.drawImage(img, sx, sy, size, size, 0, 0, 128, 128);
+          const dataUrl  = canvas.toDataURL('image/jpeg', 0.85);
+          preview.src    = dataUrl;
+          // Persist avatar immediately so it's used when "Guardar" is clicked
+          const updated  = { ...store.state.settings, avatar: dataUrl };
+          store.setState({ settings: updated });
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+      input.value = '';
+    });
+  });
+}
+
+/** HTML-encode a value for safe use in attribute values. */
+function _safeStr(v) {
+  return v ? String(v).replace(/"/g, '&quot;').replace(/</g, '&lt;') : '';
 }

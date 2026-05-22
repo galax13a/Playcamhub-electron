@@ -7,6 +7,8 @@
 const crypto = require('crypto');
 const router = require('express').Router();
 const { getDb } = require('../database/connection');
+const { validate } = require('../middleware/validate');
+const { LoginSchema, RegisterSchema, ProfileQuerySchema, ProfileUpdateSchema } = require('../schemas/auth');
 
 function hashPw(pw) {
   return crypto.createHash('sha256').update(pw + 'starcho-local-salt').digest('hex');
@@ -23,40 +25,31 @@ function ensureDefaultUser(db) {
 
 // ── Auth ─────────────────────────────────────────────────────────────────────
 
-router.post('/auth/login', (req, res) => {
-  const { username, password } = req.body || {};
-  if (!username || !password)
-    return res.status(400).json({ error: 'Completa todos los campos' });
+router.post('/auth/login', validate(LoginSchema), (req, res) => {
+  const { username, password } = req.body;
   try {
     const db = getDb();
     ensureDefaultUser(db);
-    const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username.trim());
+    const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
     if (!user || user.password !== hashPw(password))
       return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
     res.json({ ok: true, username: user.username });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.post('/auth/register', (req, res) => {
-  const { username, password } = req.body || {};
-  if (!username || !password)
-    return res.status(400).json({ error: 'Completa todos los campos' });
-  if (username.trim().length < 3)
-    return res.status(400).json({ error: 'El usuario debe tener al menos 3 caracteres' });
-  if (password.length < 6)
-    return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' });
+router.post('/auth/register', validate(RegisterSchema), (req, res) => {
+  const { username, password } = req.body;
   try {
     const db = getDb();
-    if (db.prepare('SELECT id FROM users WHERE username = ?').get(username.trim()))
+    if (db.prepare('SELECT id FROM users WHERE username = ?').get(username))
       return res.status(409).json({ error: 'Ese usuario ya existe' });
-    db.prepare('INSERT INTO users (username, password) VALUES (?, ?)').run(username.trim(), hashPw(password));
+    db.prepare('INSERT INTO users (username, password) VALUES (?, ?)').run(username, hashPw(password));
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.get('/auth/profile', (req, res) => {
-  const username = req.query.username;
-  if (!username) return res.status(400).json({ error: 'username required' });
+router.get('/auth/profile', validate(ProfileQuerySchema, 'query'), (req, res) => {
+  const { username } = req.query;
   try {
     const db   = getDb();
     const user = db.prepare('SELECT username, full_name, nickname, whatsapp, avatar FROM users WHERE username = ?').get(username);
@@ -65,13 +58,12 @@ router.get('/auth/profile', (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-router.put('/auth/profile', (req, res) => {
-  const { username, full_name, nickname, whatsapp, avatar } = req.body || {};
-  if (!username) return res.status(400).json({ error: 'username required' });
+router.put('/auth/profile', validate(ProfileUpdateSchema), (req, res) => {
+  const { username, full_name, nickname, whatsapp, avatar } = req.body;
   try {
     const db = getDb();
     db.prepare('UPDATE users SET full_name=?, nickname=?, whatsapp=?, avatar=? WHERE username=?')
-      .run(full_name || '', nickname || '', whatsapp || '', avatar || '', username);
+      .run(full_name, nickname, whatsapp, avatar, username);
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });

@@ -1,6 +1,8 @@
 'use strict';
 
 const router = require('express').Router();
+const { validate } = require('../../../../src/backend/middleware/validate');
+const { IdParamsSchema, TaskQuerySchema, TaskCreateSchema, TaskUpdateSchema, TaskStatusSchema } = require('../schemas/tasks');
 
 function userId(db, username) {
   if (!username) return null;
@@ -9,7 +11,7 @@ function userId(db, username) {
 }
 
 // GET /api/tasks
-router.get('/', (req, res) => {
+router.get('/', validate(TaskQuerySchema, 'query'), (req, res) => {
   try {
     const db     = req.db;
     const uid    = userId(db, req.query.username);
@@ -26,7 +28,7 @@ router.get('/', (req, res) => {
 });
 
 // GET /api/tasks/:id
-router.get('/:id', (req, res) => {
+router.get('/:id', validate(IdParamsSchema, 'params'), (req, res) => {
   try {
     const row = req.db.prepare('SELECT * FROM tasks WHERE id = ? AND deleted_at IS NULL').get(req.params.id);
     if (!row) return res.status(404).json({ error: 'Not found' });
@@ -35,28 +37,26 @@ router.get('/:id', (req, res) => {
 });
 
 // POST /api/tasks
-router.post('/', (req, res) => {
+router.post('/', validate(TaskCreateSchema), (req, res) => {
   try {
     const db = req.db;
-    const { title, description, status, priority, due_date, username } = req.body || {};
-    if (!title?.trim()) return res.status(400).json({ error: 'El título es obligatorio' });
+    const { title, description, status, priority, due_date, username } = req.body;
     const uid  = userId(db, username);
     const info = db.prepare(
       'INSERT INTO tasks (title, description, status, priority, due_date, user_id) VALUES (?, ?, ?, ?, ?, ?)'
-    ).run(title.trim(), description || null, status || 'pending', priority || 'medium', due_date || null, uid);
+    ).run(title, description || null, status || 'pending', priority || 'medium', due_date || null, uid);
     res.json(db.prepare('SELECT * FROM tasks WHERE id = ?').get(info.lastInsertRowid));
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // PUT /api/tasks/:id
-router.put('/:id', (req, res) => {
+router.put('/:id', validate(IdParamsSchema, 'params'), validate(TaskUpdateSchema), (req, res) => {
   try {
     const db = req.db;
-    const { title, description, status, priority, due_date } = req.body || {};
-    if (!title?.trim()) return res.status(400).json({ error: 'El título es obligatorio' });
+    const { title, description, status, priority, due_date } = req.body;
     db.prepare(
       'UPDATE tasks SET title=?, description=?, status=?, priority=?, due_date=?, updated_at=CURRENT_TIMESTAMP WHERE id=? AND deleted_at IS NULL'
-    ).run(title.trim(), description || null, status || 'pending', priority || 'medium', due_date || null, req.params.id);
+    ).run(title, description || null, status || 'pending', priority || 'medium', due_date || null, req.params.id);
     const row = db.prepare('SELECT * FROM tasks WHERE id = ?').get(req.params.id);
     if (!row) return res.status(404).json({ error: 'Not found' });
     res.json(row);
@@ -64,19 +64,16 @@ router.put('/:id', (req, res) => {
 });
 
 // PATCH /api/tasks/:id/status
-router.patch('/:id/status', (req, res) => {
+router.patch('/:id/status', validate(IdParamsSchema, 'params'), validate(TaskStatusSchema), (req, res) => {
   try {
-    const { status } = req.body || {};
-    const valid = ['pending','in_progress','completed','cancelled'];
-    if (!valid.includes(status)) return res.status(400).json({ error: 'Estado inválido' });
     req.db.prepare('UPDATE tasks SET status=?, updated_at=CURRENT_TIMESTAMP WHERE id=? AND deleted_at IS NULL')
-      .run(status, req.params.id);
+      .run(req.body.status, req.params.id);
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // DELETE /api/tasks/:id  (soft delete)
-router.delete('/:id', (req, res) => {
+router.delete('/:id', validate(IdParamsSchema, 'params'), (req, res) => {
   try {
     req.db.prepare('UPDATE tasks SET deleted_at=CURRENT_TIMESTAMP WHERE id=?').run(req.params.id);
     res.json({ ok: true });
