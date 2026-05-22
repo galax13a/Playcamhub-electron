@@ -1,0 +1,123 @@
+{
+  "name": "playryu",
+  "productName": "PlayRyu",
+  "version": "1.0.0",
+  "description": "Music player with Spotify UI and TikTok experience — download, organize, and vibe.",
+  "main": "main.js",
+  "engines": {
+    "node": ">=22.0.0"
+  },
+  "scripts": {
+    "start": "electron .",
+    "dev": "cross-env NODE_ENV=development electron .",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "rebuild": "electron-rebuild -f -w better-sqlite3",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "build": {
+    "appId": "com.playryu.app",
+    "productName": "PlayRyu",
+    "copyright": "Copyright © 2024 PlayRyu",
+    "asar": false,
+    "directories": {
+      "output": "dist",
+      "buildResources": "assets"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "plugins/**/*",
+      "assets/**/*",
+      "node_modules/**/*",
+      "!node_modules/.cache/**/*",
+      "!dist/**/*",
+      "!*.md"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/icons/icon.png",
+      "publisherName": "PlayRyu"
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg"
+        },
+        {
+          "target": "zip"
+        }
+      ],
+      "icon": "assets/icons/icon.icns",
+      "category": "public.app-category.music",
+      "darkModeSupport": true
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "assets/icons/icon.png",
+      "category": "Audio"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "PlayRyu"
+    },
+    "dmg": {
+      "title": "PlayRyu Installer",
+      "window": {
+        "width": 540,
+        "height": 380
+      }
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "playryu",
+      "repo": "playryu",
+      "releaseType": "release"
+    }
+  },
+  "keywords": [
+    "music",
+    "player",
+    "youtube",
+    "spotify",
+    "tiktok",
+    "electron"
+  ],
+  "author": {
+    "name": "PlayRyu Team",
+    "email": "hello@playryu.app"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@electron/rebuild": "^3.6.0",
+    "cross-env": "^7.0.3",
+    "electron": "^28.3.3",
+    "electron-builder": "^24.9.1"
+  },
+  "dependencies": {
+    "better-sqlite3": "^9.4.3",
+    "cors": "^2.8.5",
+    "electron-log": "^5.1.1",
+    "electron-updater": "^6.1.8",
+    "express": "^4.18.2",
+    "node-id3": "^0.2.6",
+    "uuid": "^9.0.0",
+    "yt-dlp-wrap": "^2.3.12"
+  }
+}

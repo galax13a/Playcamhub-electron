@@ -1,0 +1,69 @@
+[data-theme="matrix"] {
+  /* Brand palette — Matrix green */
+  --red:          #00FF41;
+  --red-dark:     #00CC33;
+  --red-glow:     rgba(0,255,65,0.35);
+  --purple:       #00CC33;
+  --purple-dark:  #009922;
+  --purple-glow:  rgba(0,204,51,0.30);
+  --green:        #00FF41;
+  --green-dark:   #00CC33;
+  --green-glow:   rgba(0,255,65,0.35);
+
+  /* Backgrounds — pure black terminal */
+  --bg-base:         #000000;
+  --bg-1:            #040A04;
+  --bg-2:            #071207;
+  --bg-3:            #0A1A0A;
+  --bg-4:            #0F260F;
+  --bg-glass:        rgba(0,255,65,0.04);
+  --bg-glass-hover:  rgba(0,255,65,0.09);
+
+  /* Text */
+  --text-primary:    #00FF41;
+  --text-secondary:  rgba(0,255,65,0.65);
+  --text-muted:      rgba(0,255,65,0.35);
+
+  /* Borders */
+  --border:          rgba(0,255,65,0.12);
+  --border-strong:   rgba(0,255,65,0.28);
+
+  /* Gradients */
+  --gradient-brand:      linear-gradient(135deg,#00FF41 0%,#00882A 100%);
+  --gradient-brand-vert: linear-gradient(180deg,#00FF41 0%,#003311 100%);
+  --gradient-dark:       linear-gradient(180deg,#071207 0%,#000000 100%);
+
+  /* Shadows */
+  --shadow-sm:  0 2px 8px rgba(0,0,0,0.80);
+  --shadow-md:  0 4px 24px rgba(0,0,0,0.90);
+  --shadow-lg:  0 8px 48px rgba(0,0,0,0.95);
+  --shadow-glow-red:    0 0 28px rgba(0,255,65,0.55);
+  --shadow-glow-purple: 0 0 28px rgba(0,204,51,0.45);
+  --shadow-glow-green:  0 0 28px rgba(0,255,65,0.55);
+
+  /* Typography — monospace feel */
+  --font-sans: 'Courier New', Courier, 'Lucida Console', monospace;
+}
+
+/* Scanline overlay effect */
+[data-theme="matrix"] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,255,65,0.015) 2px,
+    rgba(0,255,65,0.015) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Green glow on buttons and interactive elements */
+[data-theme="matrix"] button:focus-visible,
+[data-theme="matrix"] a:focus-visible {
+  outline: 1px solid #00FF41;
+  outline-offset: 2px;
+}

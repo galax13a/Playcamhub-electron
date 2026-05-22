@@ -1,0 +1,86 @@
+'use strict';
+
+const router = require('express').Router();
+
+function userId(db, username) {
+  if (!username) return null;
+  const row = db.prepare('SELECT id FROM users WHERE username = ?').get(username);
+  return row ? row.id : null;
+}
+
+// GET /api/tasks
+router.get('/', (req, res) => {
+  try {
+    const db     = req.db;
+    const uid    = userId(db, req.query.username);
+    const status = req.query.status;
+
+    let sql    = 'SELECT * FROM tasks WHERE deleted_at IS NULL';
+    const args = [];
+    if (uid)    { sql += ' AND user_id = ?';  args.push(uid); }
+    if (status) { sql += ' AND status = ?';   args.push(status); }
+    sql += ' ORDER BY CASE priority WHEN "urgent" THEN 0 WHEN "high" THEN 1 WHEN "medium" THEN 2 ELSE 3 END, due_date ASC';
+
+    res.json(db.prepare(sql).all(...args));
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// GET /api/tasks/:id
+router.get('/:id', (req, res) => {
+  try {
+    const row = req.db.prepare('SELECT * FROM tasks WHERE id = ? AND deleted_at IS NULL').get(req.params.id);
+    if (!row) return res.status(404).json({ error: 'Not found' });
+    res.json(row);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// POST /api/tasks
+router.post('/', (req, res) => {
+  try {
+    const db = req.db;
+    const { title, description, status, priority, due_date, username } = req.body || {};
+    if (!title?.trim()) return res.status(400).json({ error: 'El título es obligatorio' });
+    const uid  = userId(db, username);
+    const info = db.prepare(
+      'INSERT INTO tasks (title, description, status, priority, due_date, user_id) VALUES (?, ?, ?, ?, ?, ?)'
+    ).run(title.trim(), description || null, status || 'pending', priority || 'medium', due_date || null, uid);
+    res.json(db.prepare('SELECT * FROM tasks WHERE id = ?').get(info.lastInsertRowid));
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// PUT /api/tasks/:id
+router.put('/:id', (req, res) => {
+  try {
+    const db = req.db;
+    const { title, description, status, priority, due_date } = req.body || {};
+    if (!title?.trim()) return res.status(400).json({ error: 'El título es obligatorio' });
+    db.prepare(
+      'UPDATE tasks SET title=?, description=?, status=?, priority=?, due_date=?, updated_at=CURRENT_TIMESTAMP WHERE id=? AND deleted_at IS NULL'
+    ).run(title.trim(), description || null, status || 'pending', priority || 'medium', due_date || null, req.params.id);
+    const row = db.prepare('SELECT * FROM tasks WHERE id = ?').get(req.params.id);
+    if (!row) return res.status(404).json({ error: 'Not found' });
+    res.json(row);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// PATCH /api/tasks/:id/status
+router.patch('/:id/status', (req, res) => {
+  try {
+    const { status } = req.body || {};
+    const valid = ['pending','in_progress','completed','cancelled'];
+    if (!valid.includes(status)) return res.status(400).json({ error: 'Estado inválido' });
+    req.db.prepare('UPDATE tasks SET status=?, updated_at=CURRENT_TIMESTAMP WHERE id=? AND deleted_at IS NULL')
+      .run(status, req.params.id);
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// DELETE /api/tasks/:id  (soft delete)
+router.delete('/:id', (req, res) => {
+  try {
+    req.db.prepare('UPDATE tasks SET deleted_at=CURRENT_TIMESTAMP WHERE id=?').run(req.params.id);
+    res.json({ ok: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+module.exports = router;

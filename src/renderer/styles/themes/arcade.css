@@ -1,0 +1,314 @@
+/* ── Arcade Theme ────────────────────────────────────────────────────────────── */
+/* Retro arcade / pixel art aesthetic — 8-bit colors, sharp edges, neon glow    */
+[data-theme="arcade"] {
+  /* Brand palette — gold coin + neon coral */
+  --red:          #FFD700;
+  --red-dark:     #FFA500;
+  --red-glow:     rgba(255,215,0,0.50);
+  --purple:       #FF6B6B;
+  --purple-dark:  #E05050;
+  --purple-glow:  rgba(255,107,107,0.40);
+  --green:        #39FF14;
+  --green-dark:   #20CC00;
+  --green-glow:   rgba(57,255,20,0.45);
+
+  /* Backgrounds — deep space / CRT monitor */
+  --bg-base:         #05020F;
+  --bg-1:            #09041A;
+  --bg-2:            #0F082A;
+  --bg-3:            #160D3C;
+  --bg-4:            #1E1452;
+  --bg-glass:        rgba(255,215,0,0.05);
+  --bg-glass-hover:  rgba(255,215,0,0.12);
+
+  /* Text — neon yellow, classic score display */
+  --text-primary:    #FFE566;
+  --text-secondary:  rgba(255,229,102,0.70);
+  --text-muted:      rgba(255,229,102,0.38);
+
+  /* Borders — bright pixel outlines */
+  --border:          rgba(255,215,0,0.20);
+  --border-strong:   rgba(255,215,0,0.48);
+
+  /* Gradients */
+  --gradient-brand:      linear-gradient(135deg,#FFD700 0%,#FF6B6B 100%);
+  --gradient-brand-vert: linear-gradient(180deg,#FFD700 0%,#FF6B6B 100%);
+  --gradient-dark:       linear-gradient(180deg,#0F082A 0%,#05020F 100%);
+
+  /* Shadows */
+  --shadow-sm:  0 2px 8px rgba(0,0,0,0.85);
+  --shadow-md:  0 4px 24px rgba(0,0,0,0.92);
+  --shadow-lg:  0 8px 48px rgba(0,0,0,0.98);
+  --shadow-glow-red:    0 0 20px rgba(255,215,0,0.70), 0 0 40px rgba(255,215,0,0.30);
+  --shadow-glow-purple: 0 0 20px rgba(255,107,107,0.65), 0 0 40px rgba(255,107,107,0.28);
+  --shadow-glow-green:  0 0 20px rgba(57,255,20,0.65), 0 0 40px rgba(57,255,20,0.28);
+
+  /* Layout */
+  --sidebar-width:   240px;
+  --player-height:   90px;
+  --topbar-height:   60px;
+  --titlebar-height: 32px;
+  --font-sans: 'Courier New', 'Lucida Console', Courier, monospace;
+  --transition:      0.06s steps(3);
+  --transition-slow: 0.14s steps(4);
+
+  /* Pixel-perfect sharp corners everywhere */
+  --radius-xs:   0px;
+  --radius-sm:   0px;
+  --radius-md:   2px;
+  --radius-lg:   2px;
+  --radius-xl:   4px;
+  --radius-2xl:  4px;
+  --radius-full: 0px;
+}
+
+/* ── CRT scanline overlay ────────────────────────────────────────────────── */
+[data-theme="arcade"] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.18) 2px,
+    rgba(0,0,0,0.18) 4px
+  );
+  pointer-events: none;
+  z-index: 99998;
+}
+
+/* Outer glow / phosphor vignette */
+[data-theme="arcade"] body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 50%,
+    transparent 55%,
+    rgba(0,0,0,0.65) 100%
+  );
+  pointer-events: none;
+  z-index: 99997;
+}
+
+/* ── Buttons — arcade coin-op style ─────────────────────────────────────── */
+[data-theme="arcade"] .btn,
+[data-theme="arcade"] .btn-primary,
+[data-theme="arcade"] .btn-secondary,
+[data-theme="arcade"] .btn-ghost {
+  border-radius: 0;
+  text-transform: uppercase;
+  letter-spacing: .12em;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 11px;
+  transition: transform 0.06s steps(2), box-shadow 0.06s steps(2);
+}
+
+[data-theme="arcade"] .btn-primary {
+  background: #FFD700;
+  color: #05020F;
+  border: 2px solid #FFA500;
+  box-shadow:
+    4px 4px 0 #7A5800,
+    0 0 12px rgba(255,215,0,0.50);
+}
+[data-theme="arcade"] .btn-primary:hover {
+  transform: translate(-2px, -2px);
+  box-shadow:
+    6px 6px 0 #7A5800,
+    0 0 20px rgba(255,215,0,0.75);
+}
+[data-theme="arcade"] .btn-primary:active {
+  transform: translate(4px, 4px);
+  box-shadow: 0 0 8px rgba(255,215,0,0.40);
+}
+
+[data-theme="arcade"] .btn-secondary {
+  background: transparent;
+  color: #FFD700;
+  border: 2px solid #FFD700;
+  box-shadow: 3px 3px 0 rgba(255,215,0,0.35);
+}
+[data-theme="arcade"] .btn-secondary:hover {
+  background: rgba(255,215,0,0.12);
+  transform: translate(-1px, -1px);
+  box-shadow: 4px 4px 0 rgba(255,215,0,0.45);
+}
+[data-theme="arcade"] .btn-secondary:active {
+  transform: translate(3px, 3px);
+  box-shadow: 0 0 0;
+}
+
+/* ── Login button — INSERT COIN style ───────────────────────────────────── */
+[data-theme="arcade"] .lp-btn {
+  border-radius: 0;
+  text-transform: uppercase;
+  letter-spacing: .2em;
+  font-size: 14px;
+  border: 3px solid #FFD700;
+  box-shadow:
+    6px 6px 0 #7A5800,
+    0 0 24px rgba(255,215,0,0.55),
+    inset 0 1px 0 rgba(255,255,255,0.20);
+  animation: arcadePulse 1.5s steps(2) infinite;
+}
+[data-theme="arcade"] .lp-btn:hover {
+  transform: translate(-3px, -3px);
+  box-shadow:
+    9px 9px 0 #7A5800,
+    0 0 36px rgba(255,215,0,0.80);
+  animation: none;
+}
+[data-theme="arcade"] .lp-btn:active {
+  transform: translate(6px, 6px);
+  box-shadow: none;
+}
+
+@keyframes arcadePulse {
+  0%, 100% { box-shadow: 6px 6px 0 #7A5800, 0 0 24px rgba(255,215,0,0.55); }
+  50%       { box-shadow: 6px 6px 0 #7A5800, 0 0 40px rgba(255,215,0,0.90); opacity: .88; }
+}
+
+/* ── Nav items — pixelated selection cursor ──────────────────────────────── */
+[data-theme="arcade"] .nav-item {
+  border-radius: 0;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+[data-theme="arcade"] .nav-item.active {
+  border-left: 4px solid #FFD700;
+  border-radius: 0;
+  background: rgba(255,215,0,0.10);
+  box-shadow: inset 0 0 12px rgba(255,215,0,0.12);
+}
+[data-theme="arcade"] .nav-item.active::before {
+  content: '► ';
+  color: #FFD700;
+  font-size: 10px;
+}
+
+/* ── Cards — pixel panel border ─────────────────────────────────────────── */
+[data-theme="arcade"] .settings-section,
+[data-theme="arcade"] .dash-hero,
+[data-theme="arcade"] .dash-cfg-card,
+[data-theme="arcade"] .dash-quick-btn {
+  border-radius: 0;
+  border: 2px solid rgba(255,215,0,0.24);
+  box-shadow: 4px 4px 0 rgba(255,215,0,0.10);
+}
+
+[data-theme="arcade"] .dash-quick-btn:hover {
+  border-color: #FFD700;
+  box-shadow: 4px 4px 0 rgba(255,215,0,0.35);
+  transform: translate(-2px, -2px);
+}
+
+/* ── Player bar — score board style ─────────────────────────────────────── */
+[data-theme="arcade"] #player-bar {
+  border-top: 3px solid #FFD700;
+  box-shadow: 0 -4px 32px rgba(255,215,0,0.20);
+}
+
+/* ── Sidebar — arcade cabinet panel ─────────────────────────────────────── */
+[data-theme="arcade"] #sidebar {
+  border-right: 2px solid rgba(255,215,0,0.18);
+  box-shadow: 4px 0 24px rgba(255,215,0,0.08);
+}
+
+/* ── Text inputs — terminal style ───────────────────────────────────────── */
+[data-theme="arcade"] input[type="text"],
+[data-theme="arcade"] input[type="email"],
+[data-theme="arcade"] input[type="range"],
+[data-theme="arcade"] .form-control,
+[data-theme="arcade"] .cfg-input {
+  border-radius: 0;
+  border: 2px solid rgba(255,215,0,0.28);
+  font-family: var(--font-sans);
+  caret-color: #FFD700;
+}
+[data-theme="arcade"] input:focus,
+[data-theme="arcade"] .form-control:focus,
+[data-theme="arcade"] .cfg-input:focus {
+  border-color: #FFD700;
+  box-shadow: 0 0 0 2px rgba(255,215,0,0.25), 0 0 12px rgba(255,215,0,0.35);
+  outline: none;
+}
+
+/* Blinking cursor animation on active items */
+@keyframes arcadeBlink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+[data-theme="arcade"] .nav-item.active .nav-label::after {
+  content: '█';
+  font-size: 9px;
+  color: #FFD700;
+  margin-left: 4px;
+  animation: arcadeBlink .8s steps(1) infinite;
+}
+
+/* ── Range slider — retro dial ───────────────────────────────────────────── */
+[data-theme="arcade"] input[type="range"] {
+  accent-color: #FFD700;
+}
+
+/* ── Song cards & list items ─────────────────────────────────────────────── */
+[data-theme="arcade"] .song-card,
+[data-theme="arcade"] .song-row {
+  border-radius: 0;
+  border: 1px solid rgba(255,215,0,0.14);
+}
+[data-theme="arcade"] .song-card:hover,
+[data-theme="arcade"] .song-row:hover {
+  border-color: rgba(255,215,0,0.40);
+  box-shadow: 3px 3px 0 rgba(255,215,0,0.15);
+  transform: translate(-1px, -1px);
+}
+
+/* Playing indicator — flashing pixel */
+[data-theme="arcade"] .song-card.playing,
+[data-theme="arcade"] .song-row.playing {
+  border-color: #FFD700;
+  background: rgba(255,215,0,0.08);
+  box-shadow: 0 0 16px rgba(255,215,0,0.30), 3px 3px 0 rgba(255,215,0,0.25);
+}
+
+/* ── Section nav tabs ────────────────────────────────────────────────────── */
+[data-theme="arcade"] .sn-btn {
+  border-radius: 0;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-size: 10px;
+  font-family: var(--font-sans);
+}
+[data-theme="arcade"] .sn-btn.active {
+  color: #FFD700;
+  border-bottom-color: #FFD700;
+  text-shadow: 0 0 8px rgba(255,215,0,0.70);
+}
+
+/* ── Login card — arcade machine frame ───────────────────────────────────── */
+[data-theme="arcade"] .lp-card {
+  border-radius: 0;
+  border: 3px solid rgba(255,215,0,0.50);
+  box-shadow:
+    8px 8px 0 rgba(255,215,0,0.15),
+    0 0 60px rgba(255,215,0,0.20),
+    inset 0 0 40px rgba(5,2,15,0.60);
+}
+
+[data-theme="arcade"] .lp-title {
+  text-transform: uppercase;
+  letter-spacing: .15em;
+  text-shadow: 0 0 12px rgba(255,215,0,0.80);
+}
+
+[data-theme="arcade"] .lp-subtitle {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .10em;
+}

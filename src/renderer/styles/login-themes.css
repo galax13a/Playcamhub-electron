@@ -1,0 +1,378 @@
+/* ═══════════════════════════════════════════════════════════════
+   Login Page — Theme Variants
+   Applied via: #login-page[data-ltheme="..."]
+   Themes: nebula (default) | split | glass
+═══════════════════════════════════════════════════════════════ */
+
+/* Side panel is hidden by default — only shown in split theme */
+.lp-side { display: none; }
+
+/* ════════════════════════════════════════════════════════════════
+   THEME 1 — NEBULA  (dark card + animated color blobs)
+════════════════════════════════════════════════════════════════ */
+#login-page[data-ltheme="nebula"] {
+  background: var(--bg-base);
+}
+#login-page[data-ltheme="nebula"] .lp-blob {
+  animation: lp-blob-float 14s ease-in-out infinite alternate;
+}
+#login-page[data-ltheme="nebula"] .lp-blob-2 {
+  animation-delay: -7s;
+  animation-duration: 18s;
+}
+@keyframes lp-blob-float {
+  0%   { transform: scale(1)    translate(0px, 0px); }
+  50%  { transform: scale(1.12) translate(18px, -18px); }
+  100% { transform: scale(1.22) translate(28px, 22px); }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   THEME 2 — SPLIT  (left decorative panel + right form column)
+════════════════════════════════════════════════════════════════ */
+#login-page[data-ltheme="split"] {
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: stretch;
+  background: var(--bg-1);
+}
+
+#login-page[data-ltheme="split"] .lp-blob { display: none; }
+
+/* ── Left branding panel ── */
+#login-page[data-ltheme="split"] .lp-side {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  background: linear-gradient(150deg, #06060f 0%, #12063a 45%, #071c50 100%);
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 32px;
+  padding: 60px 52px;
+  position: relative;
+  overflow: hidden;
+  color: #fff;
+  text-align: center;
+}
+
+/* Decorative glow blobs inside the side panel */
+#login-page[data-ltheme="split"] .lp-side::before {
+  content: '';
+  position: absolute;
+  width: 520px; height: 520px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0,210,255,.28) 0%, transparent 68%);
+  top: -160px; right: -120px;
+  pointer-events: none;
+  animation: lp-split-glow1 12s ease-in-out infinite alternate;
+}
+#login-page[data-ltheme="split"] .lp-side::after {
+  content: '';
+  position: absolute;
+  width: 440px; height: 440px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(123,47,190,.32) 0%, transparent 68%);
+  bottom: -110px; left: -90px;
+  pointer-events: none;
+  animation: lp-split-glow2 16s ease-in-out infinite alternate;
+}
+@keyframes lp-split-glow1 {
+  from { transform: scale(1) translate(0,0); }
+  to   { transform: scale(1.2) translate(20px, 15px); }
+}
+@keyframes lp-split-glow2 {
+  from { transform: scale(1) translate(0,0); }
+  to   { transform: scale(1.15) translate(-15px, -20px); }
+}
+
+.lp-side-logo  { position: relative; z-index: 1; }
+
+.lp-side-title {
+  font-size: 38px;
+  font-weight: 900;
+  letter-spacing: -1.5px;
+  background: linear-gradient(135deg, #00D2FF 0%, #ffffff 65%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  position: relative; z-index: 1;
+  line-height: 1.1;
+}
+
+.lp-side-sub {
+  font-size: 15px;
+  color: rgba(255,255,255,.6);
+  position: relative; z-index: 1;
+  max-width: 280px;
+  line-height: 1.5;
+}
+
+.lp-side-features {
+  list-style: none;
+  padding: 0; margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  position: relative; z-index: 1;
+  align-items: flex-start;
+  width: 100%;
+  max-width: 300px;
+}
+.lp-side-features li {
+  font-size: 14px;
+  color: rgba(255,255,255,.72);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.lp-side-features li::before {
+  content: '✓';
+  display: inline-flex;
+  width: 22px; height: 22px;
+  background: rgba(0,210,255,.18);
+  border: 1px solid rgba(0,210,255,.38);
+  border-radius: 50%;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: #00D2FF;
+  flex-shrink: 0;
+}
+
+.lp-side-badge {
+  position: relative; z-index: 1;
+  font-size: 11px;
+  color: rgba(255,255,255,.35);
+  letter-spacing: .3px;
+}
+
+/* ── Right form card (split) ── */
+#login-page[data-ltheme="split"] .lp-card {
+  flex: 0 0 480px;
+  border-radius: 0;
+  min-height: 100%;
+  border: none;
+  border-left: 1px solid var(--border);
+  box-shadow: none;
+  animation: none;
+  overflow-y: auto;
+  justify-content: center;
+  padding: 60px 52px;
+}
+
+/* Hide logo & divider inside card — branding is on the side */
+#login-page[data-ltheme="split"] .lp-logo    { display: none; }
+#login-page[data-ltheme="split"] .lp-divider { display: none; }
+
+/* ════════════════════════════════════════════════════════════════
+   THEME 3 — GLASS  (deep gradient bg + frosted glass card)
+════════════════════════════════════════════════════════════════ */
+#login-page[data-ltheme="glass"] {
+  background: linear-gradient(135deg, #0c0c1e 0%, #180430 45%, #0c1a35 100%);
+}
+
+#login-page[data-ltheme="glass"] .lp-blob-1 {
+  opacity: .32;
+  width: 680px; height: 680px;
+  background: #4f46e5;
+  top: -200px; left: -200px;
+  filter: blur(130px);
+  animation: lp-glass-b1 16s ease-in-out infinite alternate;
+}
+#login-page[data-ltheme="glass"] .lp-blob-2 {
+  opacity: .26;
+  width: 580px; height: 580px;
+  background: #ec4899;
+  bottom: -160px; right: -160px;
+  filter: blur(120px);
+  animation: lp-glass-b2 20s ease-in-out infinite alternate;
+}
+@keyframes lp-glass-b1 {
+  from { transform: scale(1) translate(0, 0); }
+  to   { transform: scale(1.18) translate(35px, 25px); }
+}
+@keyframes lp-glass-b2 {
+  from { transform: scale(1) translate(0, 0); }
+  to   { transform: scale(1.12) translate(-28px, -32px); }
+}
+
+#login-page[data-ltheme="glass"] .lp-card {
+  background: rgba(255,255,255,.045);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  border: 1px solid rgba(255,255,255,.11);
+  box-shadow:
+    0 32px 100px rgba(0,0,0,.7),
+    inset 0 1px 0 rgba(255,255,255,.1),
+    inset 0 -1px 0 rgba(255,255,255,.04);
+}
+
+#login-page[data-ltheme="glass"] .lp-input {
+  background: rgba(255,255,255,.07);
+  border-color: rgba(255,255,255,.11);
+}
+#login-page[data-ltheme="glass"] .lp-input:focus {
+  background: rgba(255,255,255,.11);
+  border-color: rgba(0,210,255,.65);
+  box-shadow: 0 0 0 3px rgba(0,210,255,.14);
+}
+#login-page[data-ltheme="glass"] .lp-check-box {
+  background: rgba(255,255,255,.07);
+  border-color: rgba(255,255,255,.2);
+}
+#login-page[data-ltheme="glass"] .lp-divider {
+  background: rgba(255,255,255,.09);
+}
+#login-page[data-ltheme="glass"] .lp-btn {
+  background: linear-gradient(135deg, #4f46e5, #7c3aed);
+  box-shadow: 0 6px 28px rgba(79,70,229,.42);
+}
+#login-page[data-ltheme="glass"] .lp-btn:hover {
+  opacity: .92;
+  box-shadow: 0 8px 36px rgba(79,70,229,.62);
+}
+
+/* ════════════════════════════════════════════════════════════════
+   SETTINGS — Login theme picker preview cards
+════════════════════════════════════════════════════════════════ */
+.ltheme-grid {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.ltheme-card {
+  border: 2px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0;
+  cursor: pointer;
+  overflow: hidden;
+  background: none;
+  width: 130px;
+  transition: border-color .2s, transform .15s;
+}
+.ltheme-card:hover  { border-color: var(--border-strong); transform: translateY(-2px); }
+.ltheme-card.active { border-color: var(--red); }
+
+.ltheme-preview {
+  height: 76px;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Nebula preview */
+.ltheme-preview--nebula {
+  background: #0a0a0f;
+}
+.ltp-blob-a, .ltp-blob-b {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(14px);
+  opacity: .55;
+}
+.ltheme-preview--nebula .ltp-blob-a {
+  width: 70px; height: 70px;
+  background: #00D2FF;
+  top: -20px; left: -20px;
+}
+.ltheme-preview--nebula .ltp-blob-b {
+  width: 60px; height: 60px;
+  background: #7B2FBE;
+  bottom: -15px; right: -15px;
+}
+.ltp-card-mock {
+  width: 60px; height: 46px;
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 6px;
+  position: relative; z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 6px;
+}
+.ltp-card-mock::before,
+.ltp-card-mock::after {
+  content: '';
+  display: block;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255,255,255,.18);
+}
+.ltp-card-mock::after { width: 70%; }
+
+/* Split preview */
+.ltheme-preview--split {
+  background: #12082a;
+  flex-direction: row;
+  justify-content: stretch;
+  align-items: stretch;
+}
+.ltp-left-panel {
+  flex: 1;
+  background: linear-gradient(145deg, #06060f, #12063a, #071c50);
+  position: relative;
+  overflow: hidden;
+}
+.ltp-left-panel::before {
+  content: '';
+  position: absolute;
+  width: 50px; height: 50px;
+  border-radius: 50%;
+  background: rgba(0,210,255,.3);
+  filter: blur(12px);
+  top: -10px; right: -10px;
+}
+.ltp-right-panel {
+  flex: 0 0 55px;
+  background: #0f0f1a;
+  border-left: 1px solid rgba(255,255,255,.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ltp-right-panel .ltp-card-mock {
+  width: 42px; height: 40px;
+  border: 1px solid rgba(255,255,255,.12);
+  border-radius: 4px;
+  background: rgba(255,255,255,.05);
+}
+
+/* Glass preview */
+.ltheme-preview--glass {
+  background: linear-gradient(135deg, #0c0c1e 0%, #180430 50%, #0c1a35 100%);
+}
+.ltheme-preview--glass .ltp-blob-a {
+  width: 60px; height: 60px;
+  background: #4f46e5;
+  top: -15px; left: -15px;
+  filter: blur(18px);
+  opacity: .45;
+}
+.ltheme-preview--glass .ltp-blob-b {
+  width: 55px; height: 55px;
+  background: #ec4899;
+  bottom: -12px; right: -12px;
+  filter: blur(16px);
+  opacity: .38;
+}
+.ltp-card-glass {
+  background: rgba(255,255,255,.07);
+  border: 1px solid rgba(255,255,255,.14);
+  backdrop-filter: blur(8px);
+}
+
+.ltheme-label {
+  display: block;
+  padding: 7px 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-align: center;
+  border-top: 1px solid var(--border);
+}
+.ltheme-card.active .ltheme-label { color: var(--red); }

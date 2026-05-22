@@ -1,0 +1,164 @@
+/* ── Contacts Plugin ─────────────────────────────────────────────── */
+.ct-container {
+  padding: 24px;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.ct-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+.ct-header h2 { font-size: 22px; font-weight: 800; }
+
+.ct-new-btn {
+  background: var(--gradient-brand);
+  color: #fff;
+  border: none;
+  padding: 9px 18px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity var(--transition);
+  white-space: nowrap;
+}
+.ct-new-btn:hover { opacity: .85; }
+
+/* ── Status filters ─────────────────────────────────────────────── */
+.ct-filters {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.ct-filter {
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-full);
+  padding: 5px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all var(--transition);
+}
+.ct-filter:hover { border-color: var(--border-strong); color: var(--text-primary); }
+.ct-filter.active {
+  background: rgba(255,51,102,.12);
+  border-color: var(--red);
+  color: var(--red);
+}
+
+/* ── Grid ───────────────────────────────────────────────────────── */
+.ct-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+.ct-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+/* ── Card ───────────────────────────────────────────────────────── */
+.ct-card {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.ct-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-md);
+}
+.ct-card.ct-inactive { opacity: .55; }
+
+.ct-card-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.ct-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--gradient-brand);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+}
+.ct-card-info { flex: 1; min-width: 0; }
+.ct-name { font-size: 14px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ct-company { font-size: 12px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.ct-status-badge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  border: 1px solid;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.ct-card-contact {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ct-contact-link {
+  font-size: 12px;
+  color: var(--text-secondary);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: color var(--transition);
+}
+.ct-contact-link:hover { color: var(--text-primary); }
+
+.ct-notes-preview {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+
+.ct-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+.ct-action-btn {
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all var(--transition);
+}
+.ct-action-btn:hover { background: var(--bg-4); color: var(--text-primary); }
+.ct-action-btn.danger:hover { background: rgba(255,51,102,.12); color: var(--red); border-color: var(--red); }

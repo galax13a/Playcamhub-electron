@@ -1,0 +1,9 @@
+{
+  "id":          "contacts",
+  "name":        "Contacts",
+  "version":     "1.0.0",
+  "description": "Manage your personal and business contacts with notes and tags.",
+  "author":      "Starcho Dev",
+  "icon":        "👥",
+  "color":       "#06D6A0"
+}

@@ -1,0 +1,8 @@
+{
+  "id": "tasks",
+  "name": "Tareas",
+  "version": "1.0.0",
+  "description": "Gestión de tareas con prioridades, estados y fechas límite.",
+  "icon": "✅",
+  "color": "#10b981"
+}

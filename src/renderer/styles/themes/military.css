@@ -1,0 +1,130 @@
+/* ── Military Theme ─────────────────────────────────────────────────────────── */
+[data-theme="military"] {
+  /* Brand palette — olive drab + tactical tan */
+  --red:          #8FA820;
+  --red-dark:     #6B7D16;
+  --red-glow:     rgba(143,168,32,0.38);
+  --purple:       #C8A84B;
+  --purple-dark:  #9A7D32;
+  --purple-glow:  rgba(200,168,75,0.30);
+  --green:        #4E7C32;
+  --green-dark:   #37591F;
+  --green-glow:   rgba(78,124,50,0.38);
+
+  /* Backgrounds — dark tactical camouflage tones */
+  --bg-base:         #0B0C07;
+  --bg-1:            #13150C;
+  --bg-2:            #1C1F12;
+  --bg-3:            #262919;
+  --bg-4:            #313522;
+  --bg-glass:        rgba(143,168,32,0.06);
+  --bg-glass-hover:  rgba(143,168,32,0.12);
+
+  /* Text — aged parchment / field document */
+  --text-primary:    #D6C98A;
+  --text-secondary:  rgba(214,201,138,0.65);
+  --text-muted:      rgba(214,201,138,0.36);
+
+  /* Borders */
+  --border:          rgba(143,168,32,0.16);
+  --border-strong:   rgba(143,168,32,0.34);
+
+  /* Gradients */
+  --gradient-brand:      linear-gradient(135deg,#8FA820 0%,#C8A84B 100%);
+  --gradient-brand-vert: linear-gradient(180deg,#8FA820 0%,#4E7C32 100%);
+  --gradient-dark:       linear-gradient(180deg,#1C1F12 0%,#0B0C07 100%);
+
+  /* Shadows */
+  --shadow-sm:  0 2px 8px rgba(0,0,0,0.75);
+  --shadow-md:  0 4px 24px rgba(0,0,0,0.88);
+  --shadow-lg:  0 8px 48px rgba(0,0,0,0.96);
+  --shadow-glow-red:    0 0 24px rgba(143,168,32,0.50);
+  --shadow-glow-purple: 0 0 24px rgba(200,168,75,0.45);
+  --shadow-glow-green:  0 0 24px rgba(78,124,50,0.50);
+
+  /* Layout */
+  --sidebar-width:   240px;
+  --player-height:   90px;
+  --topbar-height:   60px;
+  --titlebar-height: 32px;
+  --font-sans: -apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+  --transition:      0.14s ease;
+  --transition-slow: 0.28s ease;
+
+  /* Sharp tactical corners */
+  --radius-xs:   2px;
+  --radius-sm:   4px;
+  --radius-md:   6px;
+  --radius-lg:   8px;
+  --radius-xl:  10px;
+  --radius-2xl: 12px;
+  --radius-full: 9999px;
+}
+
+/* Tactical grid texture overlay */
+[data-theme="military"] body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(143,168,32,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(143,168,32,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Player bar — field-radio style */
+[data-theme="military"] #player-bar {
+  border-top: 2px solid rgba(143,168,32,0.25);
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.60);
+}
+
+/* Buttons — sharp tactical style */
+[data-theme="military"] .btn,
+[data-theme="military"] .btn-primary,
+[data-theme="military"] .btn-secondary {
+  border-radius: var(--radius-sm);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  font-size: 12px;
+  font-weight: 700;
+}
+[data-theme="military"] .btn-primary {
+  background: linear-gradient(135deg, #8FA820 0%, #C8A84B 100%);
+  border: 1px solid rgba(143,168,32,0.50);
+  box-shadow: 0 2px 12px rgba(143,168,32,0.30), inset 0 1px 0 rgba(255,255,255,0.10);
+}
+[data-theme="military"] .btn-primary:hover {
+  box-shadow: 0 4px 20px rgba(143,168,32,0.45), inset 0 1px 0 rgba(255,255,255,0.15);
+}
+
+/* Nav items — field-log style */
+[data-theme="military"] .nav-item.active {
+  border-left: 3px solid var(--red);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+/* Cards — reinforced panel look */
+[data-theme="military"] .settings-section,
+[data-theme="military"] .dash-hero,
+[data-theme="military"] .dash-cfg-card,
+[data-theme="military"] .dash-quick-btn {
+  border-radius: var(--radius-sm);
+  border-color: rgba(143,168,32,0.22);
+}
+
+/* Corner insignia on cards */
+[data-theme="military"] .settings-section::before,
+[data-theme="military"] .dash-hero::before {
+  content: '▪';
+  position: absolute;
+  top: 8px; left: 10px;
+  font-size: 8px;
+  color: rgba(143,168,32,0.40);
+  pointer-events: none;
+}
+[data-theme="military"] .settings-section,
+[data-theme="military"] .dash-hero {
+  position: relative;
+}

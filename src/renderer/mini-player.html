@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self';
+                 script-src 'self';
+                 style-src 'self' 'unsafe-inline';
+                 img-src 'self' data: http://127.0.0.1:* https://*.ytimg.com https://yt3.ggpht.com;
+                 media-src 'self' http://127.0.0.1:* blob:;">
+  <title>Mini Player</title>
+
+  <!-- Theme CSS (same files as main app — data-theme attribute controls which applies) -->
+  <link rel="stylesheet" href="styles/themes/dark.css">
+  <link rel="stylesheet" href="styles/themes/light.css">
+  <link rel="stylesheet" href="styles/themes/matrix.css">
+  <link rel="stylesheet" href="styles/themes/winamp.css">
+  <link rel="stylesheet" href="styles/themes/rickmorty.css">
+  <link rel="stylesheet" href="styles/themes/kick.css">
+  <link rel="stylesheet" href="styles/themes/pink.css">
+  <link rel="stylesheet" href="styles/themes/red.css">
+  <link rel="stylesheet" href="styles/themes/military.css">
+  <link rel="stylesheet" href="styles/themes/arcade.css">
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: transparent;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      color: var(--text-primary, #f0f0f0);
+      -webkit-user-select: none;
+      user-select: none;
+      font-size: 13px;
+    }
+
+    .mp-hidden { display: none !important; }
+
+    /* ── Scrollbars ────────────────────────────────── */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--bg-4, #2d2d2d); border-radius: 4px; }
+
+    /* ── Root shell ─────────────────────────────────── */
+    #mini-root {
+      width: 100%; height: 100%;
+      background: var(--bg-1, #111);
+      border: 1px solid var(--border, rgba(255,255,255,.07));
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── Drag bar ───────────────────────────────────── */
+    #drag-bar {
+      -webkit-app-region: drag;
+      height: 28px;
+      background: var(--bg-2, #181818);
+      display: flex;
+      align-items: center;
+      padding: 0 6px;
+      gap: 4px;
+      border-bottom: 1px solid var(--border, rgba(255,255,255,.07));
+      flex-shrink: 0;
+    }
+    .db-icon {
+      width: 16px; height: 16px;
+      border-radius: 4px;
+      flex-shrink: 0;
+      object-fit: cover;
+    }
+    .db-label {
+      font-size: 9px; font-weight: 700;
+      letter-spacing: .08em;
+      color: var(--text-muted, rgba(240,240,240,.35));
+      text-transform: uppercase;
+      flex: 1;
+    }
+    .db-btn {
+      -webkit-app-region: no-drag;
+      background: none; border: none;
+      color: var(--text-muted, rgba(240,240,240,.35));
+      font-size: 11px; cursor: pointer;
+      width: 20px; height: 20px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 4px;
+      transition: background .13s, color .13s;
+      flex-shrink: 0;
+    }
+    .db-btn:hover { background: var(--bg-3, #222); color: var(--text-primary, #f0f0f0); }
+    .db-btn.active { color: var(--red, #ff3366); background: rgba(255,51,102,.1); }
+    #btn-close-mini:hover { background: rgba(255,51,102,.15); color: var(--red, #ff3366); }
+    #btn-sz {
+      font-size: 8px; font-weight: 900;
+      letter-spacing: -.02em; width: 22px;
+      color: var(--text-secondary, rgba(240,240,240,.65));
+    }
+    #btn-sz:hover { color: var(--red, #ff3366); }
+
+    /* ── Video area ─────────────────────────────────── */
+    #mp-video-wrap {
+      background: #000;
+      flex-shrink: 0;
+      position: relative;
+    }
+    #mp-video {
+      width: 100%; display: block;
+      aspect-ratio: 16 / 9;
+      max-height: 170px;
+      object-fit: contain;
+      background: #000;
+    }
+    #mp-video-badge {
+      position: absolute; top: 5px; right: 5px;
+      background: rgba(0,0,0,.65);
+      color: #fff; font-size: 8px; font-weight: 700;
+      padding: 2px 5px; border-radius: 3px;
+      pointer-events: none;
+    }
+
+    /* ── Now-playing row ────────────────────────────── */
+    #mp-now {
+      display: flex; align-items: center;
+      gap: 9px; padding: 8px 10px 5px;
+      flex-shrink: 0;
+    }
+
+    /* ── Vinyl disc ─────────────────────────────────── */
+    #mp-vinyl-wrap { flex-shrink: 0; }
+    .mp-vinyl {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%,
+        var(--bg-3,#222) 0%,
+        var(--bg-2,#181818) 50%,
+        var(--bg-1,#111) 100%);
+      border: 2px solid var(--border-strong, rgba(255,255,255,.15));
+      display: flex; align-items: center; justify-content: center;
+      position: relative; overflow: hidden;
+      box-shadow: 0 0 0 1px rgba(0,0,0,.5), inset 0 1px 3px rgba(0,0,0,.6);
+    }
+    .mp-vinyl::after {
+      content: '';
+      position: absolute; inset: 0; border-radius: 50%;
+      background: conic-gradient(
+        from 0deg, rgba(255,255,255,.05) 0deg 2deg,
+        transparent 2deg 6deg, rgba(255,255,255,.03) 6deg 8deg,
+        transparent 8deg 14deg
+      );
+    }
+    .mp-vinyl-art {
+      width: 20px; height: 20px; border-radius: 50%;
+      object-fit: cover; z-index: 2;
+      border: 1px solid rgba(0,0,0,.4);
+    }
+    .mp-vinyl-hole {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--bg-base, #0a0a0a); z-index: 2;
+    }
+    @keyframes vinyl-spin {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+    .mp-vinyl.spinning        { animation: vinyl-spin 3s linear infinite; }
+    .mp-vinyl.spinning-paused { animation: vinyl-spin 3s linear infinite paused; }
+
+    /* ── Info ───────────────────────────────────────── */
+    #mp-info { flex: 1; min-width: 0; }
+    #mp-title {
+      font-size: 12px; font-weight: 700;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      color: var(--text-primary, #f0f0f0);
+    }
+    #mp-artist {
+      font-size: 10px; color: var(--text-muted, rgba(240,240,240,.35));
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      margin-top: 2px;
+    }
+    #mp-badges { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; }
+    .mp-badge {
+      font-size: 8px; padding: 1px 5px; border-radius: 3px;
+      background: var(--bg-3, #222); color: var(--text-muted, rgba(240,240,240,.35));
+      border: 1px solid var(--border, rgba(255,255,255,.07));
+    }
+    .mp-badge.on {
+      background: rgba(255,51,102,.12);
+      color: var(--red, #ff3366);
+      border-color: rgba(255,51,102,.3);
+    }
+
+    /* ── Progress ───────────────────────────────────── */
+    #mp-progress-section { padding: 0 10px 4px; flex-shrink: 0; }
+    #mp-bar {
+      height: 3px; background: var(--bg-4, #2d2d2d); border-radius: 2px;
+      cursor: pointer; margin-bottom: 4px; position: relative;
+    }
+    #mp-bar-fill {
+      height: 100%; background: var(--red, #ff3366); border-radius: 2px;
+      width: 0%; transition: width .3s linear; pointer-events: none;
+    }
+    #mp-bar:hover #mp-bar-fill { background: var(--purple, #8b5cf6); }
+    #mp-time {
+      display: flex; justify-content: space-between;
+      font-size: 8px; color: var(--text-muted, rgba(240,240,240,.35));
+    }
+
+    /* ── Controls ───────────────────────────────────── */
+    #mp-controls {
+      display: flex; align-items: center; justify-content: center;
+      gap: 4px; padding: 3px 10px 8px; flex-shrink: 0;
+    }
+    .mc {
+      -webkit-app-region: no-drag;
+      background: none; border: none;
+      color: var(--text-muted, rgba(240,240,240,.35));
+      cursor: pointer; width: 28px; height: 28px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 6px; font-size: 13px;
+      transition: background .12s, color .12s, transform .1s;
+    }
+    .mc:hover { background: var(--bg-3, #222); color: var(--text-primary, #f0f0f0); }
+    .mc:active { transform: scale(.88); }
+    .mc.play {
+      width: 34px; height: 34px;
+      background: var(--gradient-brand, linear-gradient(135deg,#ff3366,#8b5cf6));
+      color: #fff; border-radius: 50%; font-size: 13px;
+    }
+    .mc.play:hover { opacity: .88; }
+    .mc.on { color: var(--red, #ff3366); }
+
+    /* ── Visualizer ─────────────────────────────────── */
+    #mp-visualizer { flex-shrink: 0; height: 24px; padding: 0 10px 4px; }
+    #mp-canvas { width: 100%; height: 100%; display: block; border-radius: 3px; }
+
+    /* ── Divider ────────────────────────────────────── */
+    .mp-divider { height: 1px; background: var(--border, rgba(255,255,255,.07)); flex-shrink: 0; }
+
+    /* ── Tab bar ────────────────────────────────────── */
+    #mp-tabs { display: flex; flex-shrink: 0; background: var(--bg-2, #181818); }
+    .mp-tab {
+      -webkit-app-region: no-drag;
+      flex: 1; padding: 6px 0;
+      background: none; border: none;
+      color: var(--text-muted, rgba(240,240,240,.35));
+      font-size: 10px; font-weight: 700; cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: color .15s, border-color .15s;
+    }
+    .mp-tab:hover { color: var(--text-primary, #f0f0f0); }
+    .mp-tab.active { color: var(--red, #ff3366); border-bottom-color: var(--red, #ff3366); }
+
+    /* ── Panel ──────────────────────────────────────── */
+    #mp-panel {
+      flex: 1; overflow-y: auto; min-height: 0;
+      padding-bottom: 8px;
+    }
+
+    /* Queue header with sort button */
+    .q-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 6px 10px 4px;
+      font-size: 9px; font-weight: 700;
+      color: var(--text-muted, rgba(240,240,240,.35));
+      text-transform: uppercase; letter-spacing: .06em;
+      border-bottom: 1px solid var(--border, rgba(255,255,255,.07));
+    }
+    .q-sort-btn {
+      -webkit-app-region: no-drag;
+      background: none; border: 1px solid var(--border, rgba(255,255,255,.07));
+      color: var(--text-muted, rgba(240,240,240,.35));
+      font-size: 8px; font-weight: 700; cursor: pointer;
+      padding: 2px 6px; border-radius: 3px;
+      transition: color .13s, border-color .13s;
+    }
+    .q-sort-btn:hover { color: var(--red, #ff3366); border-color: rgba(255,51,102,.3); }
+    .q-sort-btn.active { color: var(--red, #ff3366); border-color: rgba(255,51,102,.4); background: rgba(255,51,102,.08); }
+
+    /* Queue items */
+    .q-item {
+      -webkit-app-region: no-drag;
+      display: flex; align-items: center; gap: 8px;
+      padding: 5px 10px; cursor: pointer;
+      border-bottom: 1px solid var(--border, rgba(255,255,255,.07));
+      transition: background .12s;
+    }
+    .q-item:hover { background: var(--bg-3, #222); }
+    .q-item:last-child { border-bottom: none; }
+    .q-item.current { background: rgba(255,51,102,.08); }
+    .q-num { width: 16px; font-size: 8px; color: var(--text-muted, rgba(240,240,240,.35)); text-align: right; flex-shrink: 0; }
+    .q-item.current .q-num { color: var(--red, #ff3366); }
+    .q-thumb {
+      width: 30px; height: 30px; border-radius: 4px;
+      background: var(--bg-3, #222); border: 1px solid var(--border, rgba(255,255,255,.07));
+      flex-shrink: 0; display: flex; align-items: center; justify-content: center;
+      font-size: 13px; overflow: hidden;
+    }
+    .q-info { flex: 1; min-width: 0; }
+    .q-title { font-size: 11px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-primary, #f0f0f0); }
+    .q-artist { font-size: 9px; color: var(--text-muted, rgba(240,240,240,.35)); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .q-playing { font-size: 9px; color: var(--red, #ff3366); flex-shrink: 0; }
+
+    /* Playlist items */
+    .pl-item {
+      -webkit-app-region: no-drag;
+      display: flex; align-items: center; gap: 9px;
+      padding: 7px 10px; cursor: pointer;
+      border-bottom: 1px solid var(--border, rgba(255,255,255,.07));
+      transition: background .12s;
+    }
+    .pl-item:hover { background: var(--bg-3, #222); }
+    .pl-item:last-child { border-bottom: none; }
+    .pl-icon {
+      width: 32px; height: 32px; border-radius: 5px;
+      background: rgba(255,51,102,.1); border: 1px solid rgba(255,51,102,.2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; flex-shrink: 0;
+    }
+    .pl-info { flex: 1; min-width: 0; }
+    .pl-name { font-size: 11px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-primary, #f0f0f0); }
+    .pl-count { font-size: 9px; color: var(--text-muted, rgba(240,240,240,.35)); }
+    .pl-play {
+      -webkit-app-region: no-drag;
+      background: none; border: none;
+      color: var(--text-muted, rgba(240,240,240,.35));
+      font-size: 13px; cursor: pointer; padding: 4px; border-radius: 4px;
+      transition: color .12s, background .12s;
+    }
+    .pl-play:hover { color: var(--red, #ff3366); background: rgba(255,51,102,.1); }
+
+    /* Empty states */
+    .mp-empty {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 6px; padding: 20px 10px;
+      color: var(--text-muted, rgba(240,240,240,.35)); font-size: 11px;
+    }
+    .mp-empty-icon { font-size: 24px; opacity: .4; }
+
+    /* No-song placeholder */
+    #mp-no-song {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 8px; color: var(--text-muted, rgba(240,240,240,.35));
+      font-size: 11px;
+    }
+    .ns-icon { font-size: 30px; opacity: .3; }
+
+    /* ═══════════════════════════════════════════════
+       FULL-FOOTER mode — horizontal bar layout
+    ═══════════════════════════════════════════════ */
+    #mp-full-bar {
+      display: none;
+      flex: 1; flex-direction: row; align-items: center;
+      padding: 0 12px; gap: 12px; overflow: hidden;
+    }
+    .mp-full-left {
+      display: flex; align-items: center; gap: 10px;
+      width: 220px; flex-shrink: 0; min-width: 0;
+    }
+    .mp-vinyl-full {
+      width: 52px; height: 52px; flex-shrink: 0;
+    }
+    .mp-full-meta { flex: 1; min-width: 0; }
+    #mp-full-title {
+      font-size: 12px; font-weight: 700;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      color: var(--text-primary, #f0f0f0);
+    }
+    #mp-full-artist {
+      font-size: 10px; color: var(--text-muted, rgba(240,240,240,.35));
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      margin-top: 2px;
+    }
+    .mp-full-center {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; gap: 4px; min-width: 0;
+    }
+    .mp-full-controls {
+      display: flex; align-items: center; justify-content: center; gap: 4px;
+    }
+    .mp-full-prog {
+      display: flex; align-items: center; gap: 6px; width: 100%;
+    }
+    .mp-full-prog-track {
+      flex: 1; height: 3px; background: var(--bg-4, #2d2d2d);
+      border-radius: 2px; cursor: pointer; position: relative;
+    }
+    #mp-full-bar-fill {
+      height: 100%; background: var(--red, #ff3366); border-radius: 2px;
+      width: 0%; transition: width .3s linear; pointer-events: none;
+    }
+    .mp-full-prog-track:hover #mp-full-bar-fill { background: var(--purple, #8b5cf6); }
+    .mp-full-time { font-size: 8px; color: var(--text-muted, rgba(240,240,240,.35)); white-space: nowrap; }
+    .mp-full-right {
+      width: 160px; flex-shrink: 0; height: 100%;
+      display: flex; align-items: center;
+    }
+    #mp-full-canvas { width: 100%; height: 50px; display: block; border-radius: 4px; }
+
+    /* ═══════════════════════════════════════════════
+       SIZE-MODE OVERRIDES
+    ═══════════════════════════════════════════════ */
+
+    /* ── mini (270×88): drag bar + controls only ── */
+    [data-sz="mini"] #mp-video-wrap,
+    [data-sz="mini"] #mp-no-song,
+    [data-sz="mini"] #mp-now,
+    [data-sz="mini"] #mp-progress-section,
+    [data-sz="mini"] #mp-visualizer,
+    [data-sz="mini"] #mp-divider,
+    [data-sz="mini"] #mp-tabs,
+    [data-sz="mini"] #mp-panel,
+    [data-sz="mini"] #mp-full-bar       { display: none !important; }
+    [data-sz="mini"] #mp-controls       { padding: 0 8px; flex: 1; }
+    [data-sz="mini"] .db-btn[data-panel]{ display: none !important; }
+
+    /* ── minimalista (330×200): no panels ── */
+    [data-sz="minimalista"] #mp-divider,
+    [data-sz="minimalista"] #mp-tabs,
+    [data-sz="minimalista"] #mp-panel,
+    [data-sz="minimalista"] #mp-full-bar { display: none !important; }
+    [data-sz="minimalista"] .db-btn[data-panel] { display: none !important; }
+
+    /* ── full (screen-wide footer): horizontal bar ── */
+    [data-sz="full"] #mp-video-wrap,
+    [data-sz="full"] #mp-no-song,
+    [data-sz="full"] #mp-now,
+    [data-sz="full"] #mp-progress-section,
+    [data-sz="full"] #mp-visualizer,
+    [data-sz="full"] #mp-divider,
+    [data-sz="full"] #mp-tabs,
+    [data-sz="full"] #mp-panel          { display: none !important; }
+    [data-sz="full"] #mp-full-bar       { display: flex; }
+    [data-sz="full"] #drag-bar          { -webkit-app-region: drag; }
+    [data-sz="full"] #mini-root         { border-radius: 0; border-left: none; border-right: none; border-bottom: none; }
+  </style>
+</head>
+<body>
+<div id="mini-root" data-sz="minimalista">
+
+  <!-- ── Drag bar ───────────────────────────────── -->
+  <div id="drag-bar">
+    <img class="db-icon" id="mp-app-icon" src="" alt="">
+    <span class="db-label">Mini Player</span>
+    <button type="button" class="db-btn" id="btn-video-toggle" title="Ocultar video" style="display:none">👁</button>
+    <button type="button" class="db-btn" data-panel="queue"     id="btn-tab-queue"    title="Cola">≡</button>
+    <button type="button" class="db-btn" data-panel="playlists" id="btn-tab-playlist" title="Playlists">▤</button>
+    <button type="button" class="db-btn" id="btn-sz"            title="Cambiar tamaño">M2</button>
+    <button type="button" class="db-btn" id="btn-minimize-mini" title="Minimizar">—</button>
+    <button type="button" class="db-btn" id="btn-close-mini"    title="Cerrar">✕</button>
+  </div>
+
+  <!-- ── Video section ─────────────────────────── -->
+  <div id="mp-video-wrap" class="mp-hidden">
+    <video id="mp-video" muted></video>
+    <span id="mp-video-badge">📺 VIDEO</span>
+  </div>
+
+  <!-- ── No-song placeholder ───────────────────── -->
+  <div id="mp-no-song">
+    <div class="ns-icon">🎵</div>
+    <span>Sin reproducción activa</span>
+  </div>
+
+  <!-- ── Now-playing info ──────────────────────── -->
+  <div id="mp-now" class="mp-hidden">
+    <div id="mp-vinyl-wrap">
+      <div class="mp-vinyl" id="mp-vinyl-disc">
+        <div class="mp-vinyl-hole"></div>
+      </div>
+    </div>
+    <div id="mp-info">
+      <div id="mp-title">—</div>
+      <div id="mp-artist">—</div>
+      <div id="mp-badges">
+        <span class="mp-badge" id="badge-shuffle">⇄</span>
+        <span class="mp-badge" id="badge-repeat">⇅</span>
+        <span class="mp-badge" id="badge-type">🎵</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Progress bar ──────────────────────────── -->
+  <div id="mp-progress-section" class="mp-hidden">
+    <div id="mp-bar"><div id="mp-bar-fill"></div></div>
+    <div id="mp-time"><span id="mp-cur">0:00</span><span id="mp-dur">0:00</span></div>
+  </div>
+
+  <!-- ── Controls ──────────────────────────────── -->
+  <div id="mp-controls" class="mp-hidden">
+    <button type="button" class="mc" id="mc-prev"    title="Anterior">⏮</button>
+    <button type="button" class="mc" id="mc-shuffle" title="Aleatorio">⇄</button>
+    <button type="button" class="mc play" id="mc-play" title="Play/Pausa">▶</button>
+    <button type="button" class="mc" id="mc-repeat"  title="Repetir">⇅</button>
+    <button type="button" class="mc" id="mc-next"    title="Siguiente">⏭</button>
+  </div>
+
+  <!-- ── Visualizer ────────────────────────────── -->
+  <div id="mp-visualizer" class="mp-hidden">
+    <canvas id="mp-canvas"></canvas>
+  </div>
+
+  <div class="mp-divider mp-hidden" id="mp-divider"></div>
+
+  <!-- ── Tab bar ───────────────────────────────── -->
+  <div id="mp-tabs" class="mp-hidden">
+    <button type="button" class="mp-tab active" data-panel="queue">🎵 Cola</button>
+    <button type="button" class="mp-tab"        data-panel="playlists">📋 Playlists</button>
+  </div>
+
+  <!-- ── Panel (queue / playlists) ─────────────── -->
+  <div id="mp-panel" class="mp-hidden">
+    <div id="panel-queue"></div>
+    <div id="panel-playlists" class="mp-hidden"></div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════
+       FULL-FOOTER horizontal bar (sz=full only)
+  ═══════════════════════════════════════════════ -->
+  <div id="mp-full-bar">
+
+    <!-- Left: art + meta -->
+    <div class="mp-full-left">
+      <div class="mp-vinyl mp-vinyl-full" id="mp-full-vinyl">
+        <div class="mp-vinyl-hole"></div>
+      </div>
+      <div class="mp-full-meta">
+        <div id="mp-full-title">—</div>
+        <div id="mp-full-artist">—</div>
+      </div>
+    </div>
+
+    <!-- Center: controls + progress -->
+    <div class="mp-full-center">
+      <div class="mp-full-controls">
+        <button type="button" class="mc" id="mc-f-prev"    title="Anterior">⏮</button>
+        <button type="button" class="mc" id="mc-f-shuffle" title="Aleatorio">⇄</button>
+        <button type="button" class="mc play" id="mc-f-play" title="Play/Pausa">▶</button>
+        <button type="button" class="mc" id="mc-f-repeat"  title="Repetir">⇅</button>
+        <button type="button" class="mc" id="mc-f-next"    title="Siguiente">⏭</button>
+      </div>
+      <div class="mp-full-prog">
+        <span class="mp-full-time" id="mp-full-cur">0:00</span>
+        <div class="mp-full-prog-track" id="mp-full-track">
+          <div id="mp-full-bar-fill"></div>
+        </div>
+        <span class="mp-full-time" id="mp-full-dur">0:00</span>
+      </div>
+    </div>
+
+    <!-- Right: visualizer -->
+    <div class="mp-full-right">
+      <canvas id="mp-full-canvas"></canvas>
+    </div>
+
+  </div>
+
+</div>
+<!-- Hidden audio element for visualizer (muted, synced to main player) -->
+<audio id="mp-viz-audio" class="mp-hidden" crossorigin="anonymous"></audio>
+<script src="mini-player.js"></script>
+</body>
+</html>

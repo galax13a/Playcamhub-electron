@@ -1,0 +1,43 @@
+[data-theme="winamp"] {
+  /* Brand palette — classic Winamp cyan/teal */
+  --red:          #00B4D8;
+  --red-dark:     #0077B6;
+  --red-glow:     rgba(0,180,216,0.35);
+  --purple:       #0096C7;
+  --purple-dark:  #0077B6;
+  --purple-glow:  rgba(0,150,199,0.30);
+  --green:        #48CAE4;
+  --green-dark:   #00B4D8;
+  --green-glow:   rgba(72,202,228,0.30);
+
+  /* Backgrounds — classic dark gray */
+  --bg-base:         #1c1c1c;
+  --bg-1:            #232323;
+  --bg-2:            #2c2c2c;
+  --bg-3:            #363636;
+  --bg-4:            #424242;
+  --bg-glass:        rgba(0,180,216,0.05);
+  --bg-glass-hover:  rgba(0,180,216,0.10);
+
+  /* Text */
+  --text-primary:    #E8F4F8;
+  --text-secondary:  rgba(232,244,248,0.65);
+  --text-muted:      rgba(232,244,248,0.35);
+
+  /* Borders */
+  --border:          rgba(0,180,216,0.15);
+  --border-strong:   rgba(0,180,216,0.35);
+
+  /* Gradients */
+  --gradient-brand:      linear-gradient(135deg,#00B4D8 0%,#0077B6 100%);
+  --gradient-brand-vert: linear-gradient(180deg,#00B4D8 0%,#0077B6 100%);
+  --gradient-dark:       linear-gradient(180deg,#2c2c2c 0%,#1c1c1c 100%);
+
+  /* Shadows */
+  --shadow-sm:  0 2px 8px rgba(0,0,0,0.60);
+  --shadow-md:  0 4px 24px rgba(0,0,0,0.75);
+  --shadow-lg:  0 8px 48px rgba(0,0,0,0.88);
+  --shadow-glow-red:    0 0 24px rgba(0,180,216,0.50);
+  --shadow-glow-purple: 0 0 24px rgba(0,150,199,0.45);
+  --shadow-glow-green:  0 0 24px rgba(72,202,228,0.45);
+}

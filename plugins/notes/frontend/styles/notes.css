@@ -1,0 +1,181 @@
+/* ── Notes Plugin ─────────────────────────────────────────────── */
+.nt-container {
+  padding: 24px;
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.nt-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.nt-header h2 {
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.nt-new-btn {
+  background: var(--gradient-brand);
+  color: #fff;
+  border: none;
+  padding: 9px 18px;
+  border-radius: var(--radius-md);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity var(--transition);
+}
+.nt-new-btn:hover { opacity: .85; }
+
+.nt-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.nt-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--text-muted);
+  font-size: 14px;
+}
+
+/* ── Note Card ─────────────────────────────────────────────────── */
+.nt-card {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+.nt-card:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-md);
+}
+
+.nt-card-head {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  cursor: pointer;
+  padding: 0;
+  user-select: none;
+}
+
+.nt-color-bar {
+  width: 5px;
+  align-self: stretch;
+  background: var(--note-color, #6366f1);
+  flex-shrink: 0;
+  border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+}
+.nt-card.expanded .nt-color-bar {
+  border-radius: var(--radius-lg) 0 0 0;
+}
+
+.nt-card-title {
+  flex: 1;
+  padding: 14px 14px;
+  min-width: 0;
+}
+
+.nt-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nt-date {
+  display: inline-block;
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--text-muted);
+  background: var(--bg-3);
+  padding: 1px 7px;
+  border-radius: var(--radius-full);
+}
+
+.nt-toggle-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 14px 14px;
+  font-size: 12px;
+  transition: transform var(--transition), color var(--transition);
+  flex-shrink: 0;
+}
+.nt-toggle-btn:hover { color: var(--text-primary); }
+.nt-card.expanded .nt-toggle-btn { transform: rotate(180deg); }
+
+/* ── Collapsible body ──────────────────────────────────────────── */
+.nt-card-body {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height .28s ease, padding .28s ease;
+}
+.nt-card.expanded .nt-card-body {
+  max-height: 600px;
+  border-top: 1px solid var(--border);
+}
+
+.nt-content {
+  padding: 14px 14px 10px 20px;
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.65;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.nt-content-empty {
+  padding: 14px 14px 10px 20px;
+  font-size: 13px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.nt-actions {
+  display: flex;
+  gap: 8px;
+  padding: 8px 14px 14px 20px;
+}
+
+.nt-action-btn {
+  background: var(--bg-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all var(--transition);
+}
+.nt-action-btn:hover { background: var(--bg-4); color: var(--text-primary); }
+.nt-action-btn.danger:hover { background: rgba(255,51,102,.12); color: var(--red); border-color: var(--red); }
+
+/* ── Note form inside modal ────────────────────────────────────── */
+.nt-color-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+.nt-color-swatch {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  cursor: pointer;
+  transition: transform var(--transition), border-color var(--transition);
+}
+.nt-color-swatch:hover      { transform: scale(1.15); }
+.nt-color-swatch.selected   { border-color: var(--text-primary); }

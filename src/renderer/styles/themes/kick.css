@@ -1,0 +1,65 @@
+[data-theme="kick"] {
+  /* Brand palette — Kick streaming platform green */
+  --red:          #53FC18;
+  --red-dark:     #3ACC10;
+  --red-glow:     rgba(83,252,24,0.42);
+  --purple:       #2ECC71;
+  --purple-dark:  #1a7a3c;
+  --purple-glow:  rgba(46,204,113,0.32);
+  --green:        #53FC18;
+  --green-dark:   #3ACC10;
+  --green-glow:   rgba(83,252,24,0.42);
+
+  /* Backgrounds — deep near-black with green tint */
+  --bg-base:         #070d07;
+  --bg-1:            #0d160d;
+  --bg-2:            #121f12;
+  --bg-3:            #182918;
+  --bg-4:            #1e341e;
+  --bg-glass:        rgba(83,252,24,0.04);
+  --bg-glass-hover:  rgba(83,252,24,0.09);
+
+  /* Text */
+  --text-primary:    #E8F8E8;
+  --text-secondary:  rgba(232,248,232,0.65);
+  --text-muted:      rgba(232,248,232,0.34);
+
+  /* Borders */
+  --border:          rgba(83,252,24,0.11);
+  --border-strong:   rgba(83,252,24,0.28);
+
+  /* Gradients */
+  --gradient-brand:      linear-gradient(135deg,#53FC18 0%,#2ECC71 100%);
+  --gradient-brand-vert: linear-gradient(180deg,#53FC18 0%,#1a7a3c 100%);
+  --gradient-dark:       linear-gradient(180deg,#121f12 0%,#070d07 100%);
+
+  /* Shadows */
+  --shadow-sm:  0 2px 8px rgba(0,0,0,0.75);
+  --shadow-md:  0 4px 24px rgba(0,0,0,0.88);
+  --shadow-lg:  0 8px 48px rgba(0,0,0,0.95);
+  --shadow-glow-red:    0 0 32px rgba(83,252,24,0.55);
+  --shadow-glow-purple: 0 0 32px rgba(46,204,113,0.48);
+  --shadow-glow-green:  0 0 32px rgba(83,252,24,0.55);
+
+  /* Layout — same as base */
+  --sidebar-width:   240px;
+  --player-height:   90px;
+  --topbar-height:   60px;
+  --titlebar-height: 32px;
+  --font-sans: -apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;
+  --transition:      0.18s ease;
+  --transition-slow: 0.38s ease;
+  --radius-xs:   4px;
+  --radius-sm:   8px;
+  --radius-md:  12px;
+  --radius-lg:  16px;
+  --radius-full: 9999px;
+}
+
+[data-theme="kick"] #player-bar {
+  box-shadow: 0 -2px 40px rgba(83,252,24,0.13), 0 -1px 0 rgba(83,252,24,0.22);
+}
+
+[data-theme="kick"] #sidebar {
+  box-shadow: 2px 0 40px rgba(83,252,24,0.07);
+}

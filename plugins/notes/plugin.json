@@ -1,0 +1,8 @@
+{
+  "id": "notes",
+  "name": "Notas",
+  "version": "1.0.0",
+  "description": "Crea y organiza notas con colores y fechas importantes. Soporte para colapsar y expandir.",
+  "icon": "📝",
+  "color": "#6366f1"
+}

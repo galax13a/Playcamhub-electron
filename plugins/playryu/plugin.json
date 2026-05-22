@@ -1,0 +1,9 @@
+{
+  "id":          "playryu",
+  "name":        "PlayRyu",
+  "version":     "1.0.0",
+  "description": "YouTube search, local music library, playlists, categories and download manager.",
+  "author":      "Starcho Dev",
+  "icon":        "🎵",
+  "color":       "#7B2FBE"
+}
