@@ -1,8 +1,14 @@
 /**
  * Notes plugin — frontend registration.
- * Contributes: 1 nav item, 1 view renderer, 1 dashboard content widget.
+ *
+ * Contributes:
+ *  - 1 sidebar nav item  (labelKey: 'nav_notes' → translated by Sidebar via i18n.t())
+ *  - 1 view renderer     (notes:list → NoteList.js)
+ *  - 1 dashboard widget  (zone: content, priority 70 — total/with-date counts + 3 recent titles)
  */
 import API from '../../../src/renderer/utils/api.js';
+import { statRow, grid, esc } from '../../../src/renderer/utils/html.js';
+import { recentList }         from '../../../src/renderer/components/ui.js';
 
 export default {
   id: 'notes',
@@ -18,7 +24,7 @@ export default {
   },
 
   navItems: [
-    { view: 'notes:list', icon: '📝', label: 'Notas' },
+    { view: 'notes:list', icon: '📝', labelKey: 'nav_notes', label: 'Notes' },
   ],
 
   views: {
@@ -32,51 +38,27 @@ export default {
 
   dashboardWidgets: [
     {
-      id:       'notes-summary',
-      zone:     'content',
-      priority: 70,
-      title:    '📝 Notas',
+      id: 'notes-summary', zone: 'content', priority: 70, title: '📝 Notas',
       async render(el) {
         let notes = [];
         try { notes = await API.notes.list(); } catch (_) {}
 
         const withDate = notes.filter(n => n.important_date).length;
-        // API returns newest first — take the last 3 for a quick preview
+        // API returns newest first — take the first 3 for a quick preview
         const recent   = notes.slice(0, 3);
 
-        el.innerHTML = `
-          <div style="display:flex;flex-direction:column;gap:10px">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-              ${_row('📝', 'Total',     notes.length)}
-              ${_row('📅', 'Con fecha', withDate)}
-            </div>
-            ${recent.length ? `
-              <div style="border-top:1px solid var(--border);padding-top:8px;
-                          display:flex;flex-direction:column;gap:5px">
-                ${recent.map(n => `
-                  <div style="font-size:12px;color:var(--text-secondary);
-                              white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-                    📝 ${_esc(n.title || 'Sin título')}
-                  </div>`).join('')}
-              </div>` : ''}
-          </div>`;
+        el.innerHTML = `<div style="display:flex;flex-direction:column;gap:10px">
+          ${grid(2, '8px',
+            statRow('📝', 'Total',     notes.length),
+            statRow('📅', 'Con fecha', withDate),
+          )}
+          ${recentList(recent, n => `
+            <div style="font-size:12px;color:var(--text-secondary);
+                        white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+              📝 ${esc(n.title || 'Sin título')}
+            </div>`)}
+        </div>`;
       },
     },
   ],
 };
-
-function _row(icon, label, value) {
-  return `
-    <div style="background:var(--bg-3);border-radius:var(--radius-sm);
-                padding:10px 12px;display:flex;align-items:center;gap:8px">
-      <span style="font-size:18px">${icon}</span>
-      <div>
-        <div style="font-size:16px;font-weight:700;color:var(--text-primary)">${value}</div>
-        <div style="font-size:11px;color:var(--text-muted)">${label}</div>
-      </div>
-    </div>`;
-}
-
-function _esc(s) {
-  return String(s || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-}

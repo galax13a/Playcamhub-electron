@@ -65,6 +65,33 @@ body {
   transform: translateX(-50%);
 }
 
+/* Hamburger button — hidden on desktop, shown via mobile media query */
+.tb-hamburger {
+  display: none;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  width: 28px;
+  height: 28px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: var(--radius-xs);
+  -webkit-app-region: no-drag;
+  flex-shrink: 0;
+}
+.tb-hamburger span {
+  display: block;
+  width: 16px;
+  height: 2px;
+  background: var(--text-muted);
+  border-radius: 2px;
+  transition: background var(--transition);
+}
+.tb-hamburger:hover span { background: var(--text-primary); }
+
 .window-controls {
   display: flex;
   gap: 7px;
@@ -1102,6 +1129,28 @@ body {
   transition: all var(--transition);
 }
 .modal-close:hover { background: var(--red); color: #fff; }
+
+/* ── Shared component styles ───────────────────────────────────────────────── */
+/* .status-badge — colored inline badge used by html.js badge() helper */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  line-height: 1.5;
+}
+
+/* Exit animation triggered by JS .closing class */
+.modal-overlay.closing {
+  animation: overlayFadeOut .28s ease forwards;
+  pointer-events: none;
+}
+.modal-overlay.closing .modal {
+  animation: modalFlyOut .28s cubic-bezier(0.4, 0, 0.6, 1) forwards;
+}
 
 /* ── Forms ────────────────────────────────────────────────────────────────── */
 .form-group { margin-bottom: 16px; }
@@ -3095,6 +3144,196 @@ select.form-control { cursor: pointer; appearance: none; }
   text-align: center;
   font-size: 13px;
   color: var(--text-muted);
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SIDEBAR COLLAPSE + RESPONSIVE
+══════════════════════════════════════════════════════════════════════════ */
+
+/* Smooth width transition on the sidebar itself */
+#sidebar {
+  transition: width 0.25s cubic-bezier(0.22,1,0.36,1);
+}
+
+/* ── Collapse toggle button ─────────────────────────────────────────────── */
+.sb-collapse-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--radius-xs);
+  font-size: 16px;
+  font-weight: 700;
+  transition: color var(--transition), background var(--transition);
+  flex-shrink: 0;
+  margin-left: auto;
+  line-height: 1;
+}
+.sb-collapse-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-glass-hover);
+}
+
+/* ── Collapsed state ────────────────────────────────────────────────────── */
+.sidebar--collapsed {
+  width: 56px !important;
+}
+
+/* Hide text-only elements when collapsed */
+.sidebar--collapsed .logo-text-group,
+.sidebar--collapsed .nav-label,
+.sidebar--collapsed .nav-section-label {
+  display: none;
+}
+
+/* Hide separators in collapsed mode (they look odd without labels) */
+.sidebar--collapsed .nav-separator {
+  margin: 4px 8px;
+}
+
+/* Center logo area */
+.sidebar--collapsed .sidebar-logo {
+  justify-content: center;
+  padding: 14px 8px;
+  gap: 0;
+}
+.sidebar--collapsed .sb-collapse-btn {
+  margin-left: 0;
+}
+
+/* Center nav items, icon only */
+.sidebar--collapsed .nav-item {
+  justify-content: center;
+  padding: 10px 6px;
+  gap: 0;
+}
+
+/* Center user footer */
+.sidebar--collapsed .sidebar-footer .sidebar-user {
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 4px;
+  justify-content: center;
+}
+.sidebar--collapsed .sb-user-info {
+  display: none;
+}
+.sidebar--collapsed .sb-logout-icon-btn {
+  margin-left: 0;
+}
+.sidebar--collapsed .sb-avatar {
+  width: 30px;
+  height: 30px;
+}
+
+/* Theater mode: account for collapsed sidebar */
+.sidebar--collapsed ~ .content-area .video-panel.mode-theater {
+  left: 56px;
+}
+
+/* ── Responsive layout ──────────────────────────────────────────────────── */
+
+/* Tablet: auto-collapse sidebar */
+@media (max-width: 900px) {
+  #sidebar {
+    width: 56px !important;
+  }
+  #sidebar .logo-text-group,
+  #sidebar .nav-label,
+  #sidebar .nav-section-label {
+    display: none;
+  }
+  #sidebar .sidebar-logo {
+    justify-content: center;
+    padding: 14px 8px;
+    gap: 0;
+  }
+  #sidebar .sb-collapse-btn {
+    display: none;
+  }
+  #sidebar .nav-item {
+    justify-content: center;
+    padding: 10px 6px;
+    gap: 0;
+  }
+  #sidebar .sidebar-footer .sidebar-user {
+    flex-direction: column;
+    gap: 4px;
+    padding: 8px 4px;
+    justify-content: center;
+  }
+  #sidebar .sb-user-info {
+    display: none;
+  }
+  #sidebar .sb-logout-icon-btn {
+    margin-left: 0;
+  }
+  #sidebar .sb-avatar {
+    width: 30px;
+    height: 30px;
+  }
+}
+
+/* Small screens: overlay sidebar, hamburger toggle */
+@media (max-width: 600px) {
+  :root {
+    --sidebar-width: 220px;
+  }
+  #sidebar {
+    position: fixed;
+    left: 0;
+    top: var(--titlebar-height);
+    bottom: 0;
+    z-index: 1000;
+    width: var(--sidebar-width) !important;
+    transform: translateX(-100%);
+    transition: transform 0.25s cubic-bezier(0.22,1,0.36,1);
+    box-shadow: 4px 0 24px rgba(0,0,0,.4);
+  }
+  #sidebar.mobile-open {
+    transform: translateX(0);
+  }
+  /* Restore full sidebar appearance on mobile overlay */
+  #sidebar .logo-text-group,
+  #sidebar .nav-label,
+  #sidebar .nav-section-label,
+  #sidebar .sb-user-info { display: revert; }
+  #sidebar .sb-collapse-btn { display: none; }
+  #sidebar .sidebar-logo { justify-content: flex-start; padding: 16px 14px 14px; gap: 10px; }
+  #sidebar .nav-item { justify-content: flex-start; padding: 10px 12px; gap: 11px; }
+  #sidebar .sidebar-footer .sidebar-user { flex-direction: row; gap: 10px; padding: 10px 12px; }
+  #sidebar .sb-avatar { width: 34px; height: 34px; }
+  #sidebar .sb-logout-icon-btn { margin-left: auto; }
+
+  /* Semi-transparent backdrop */
+  .sidebar-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.45);
+    z-index: 999;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+  .sidebar-overlay.visible {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  /* Full-width content area */
+  .main-layout {
+    overflow: hidden;
+  }
+
+  /* Hamburger button in title bar (visible only on mobile) */
+  #btn-hamburger {
+    display: flex;
+  }
 }
 
 /* Queue items */

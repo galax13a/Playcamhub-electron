@@ -15,6 +15,8 @@ import store          from '../store.js';
 import API            from '../utils/api.js';
 import PluginRegistry from '../core/PluginRegistry.js';
 import { openProfileModal } from './Modal.js';
+import { greeting, dateStr, fmtBytes } from '../utils/formatters.js';
+import { esc } from '../utils/html.js';
 
 const DEFAULT_AVATAR = `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><circle cx='32' cy='32' r='32' fill='%23333'/><circle cx='32' cy='24' r='12' fill='%23666'/><ellipse cx='32' cy='56' rx='20' ry='14' fill='%23666'/></svg>`;
 
@@ -37,7 +39,7 @@ export async function renderDashboard(el) {
     const stats = await API.songs.stats();
     audioCount  = stats.audioCount ?? audioCount;
     videoCount  = stats.videoCount ?? 0;
-    diskText    = _fmtBytes(stats.diskBytes);
+    diskText    = fmtBytes(stats.diskBytes);
   } catch (_) {}
 
   // Build quick-action list: core shortcuts + all plugin nav items
@@ -69,12 +71,12 @@ export async function renderDashboard(el) {
             <ellipse cx="32" cy="32" rx="20" ry="8" stroke="white" stroke-width="2" fill="none" transform="rotate(-60 32 32)"/>
           </svg>
           <div>
-            <div class="dash-topbar-app">${_esc(cfg.appName || 'Starcho Electron')}</div>
-            <div class="dash-topbar-slogan">${_esc(cfg.appSlogan || 'Desarrollo ágil con Electron')}</div>
+            <div class="dash-topbar-app">${esc(cfg.appName || 'Starcho Electron')}</div>
+            <div class="dash-topbar-slogan">${esc(cfg.appSlogan || 'Desarrollo ágil con Electron')}</div>
           </div>
         </div>
         <div class="dash-topbar-right">
-          <span class="dash-topbar-date">${_dateStr()}</span>
+          <span class="dash-topbar-date">${dateStr()}</span>
           <button class="dash-hdr-btn" id="dh-profile-btn" title="Editar perfil">👤</button>
           <button class="dash-hdr-btn dash-hdr-btn--primary" id="dh-settings-btn" title="Configuración">⚙️</button>
         </div>
@@ -85,8 +87,8 @@ export async function renderDashboard(el) {
         <div class="dash-hero-left">
           <img class="dash-avatar" id="dh-avatar" src="${avatar}" alt="avatar">
           <div>
-            <div class="dash-greeting">${_greeting()}, bienvenido de vuelta</div>
-            <div class="dash-name">${_esc(name)}</div>
+            <div class="dash-greeting">${greeting()}, bienvenido de vuelta</div>
+            <div class="dash-name">${esc(name)}</div>
             <span class="dash-plan ${plan === 'premium' ? 'plan-premium' : ''}">
               ${plan === 'premium' ? '⭐ Premium' : '🔹 Basic'}
             </span>
@@ -146,8 +148,8 @@ export async function renderDashboard(el) {
 
       <!-- ── 7. Footer ─────────────────────────────────────────────── -->
       <div class="dash-footer">
-        <span>${_esc(cfg.appName || 'Starcho Electron')} v${_esc(cfg.appVersion || '1.0.0')}</span>
-        <span style="color:var(--text-muted)">${_dateStr()}</span>
+        <span>${esc(cfg.appName || 'Starcho Electron')} v${esc(cfg.appVersion || '1.0.0')}</span>
+        <span style="color:var(--text-muted)">${dateStr()}</span>
       </div>
 
     </div>`;
@@ -233,29 +235,5 @@ const _cpuColor = pct => pct > 80 ? 'var(--red)' : pct > 50 ? '#f59e0b' : 'var(-
 const _memColor = pct => pct > 85 ? 'var(--red)' : pct > 65 ? '#f59e0b' : 'var(--green)';
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
-
-function _greeting() {
-  const h = new Date().getHours();
-  if (h < 12) return 'Buenos días';
-  if (h < 18) return 'Buenas tardes';
-  return 'Buenas noches';
-}
-
-function _dateStr() {
-  return new Date().toLocaleDateString('es-ES', {
-    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
-  });
-}
-
-function _fmtBytes(bytes) {
-  if (!bytes) return '0 B';
-  if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 ** 3) return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
-  return `${(bytes / 1024 ** 3).toFixed(2)} GB`;
-}
-
-function _esc(s) {
-  return String(s || '')
-    .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-}
+// greeting(), dateStr(), fmtBytes() are imported from ../utils/formatters.js
+// esc() is imported from ../utils/html.js

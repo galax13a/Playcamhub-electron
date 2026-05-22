@@ -1,21 +1,47 @@
 'use strict';
+/**
+ * Sidebar — Left navigation panel.
+ *
+ * Responsibilities:
+ *  - Renders the app logo, plugin nav items, settings link, and user footer.
+ *  - Translates nav labels live via i18n (responds to 'lang:change').
+ *  - Supports collapsible icon-only mode persisted to localStorage.
+ *  - On mobile (≤600 px) the sidebar becomes a fixed overlay toggled by
+ *    the hamburger button in the title bar.
+ *
+ * State machine:
+ *   expanded ↔ collapsed   (toggled by #sb-collapse-btn, key: 'sb_collapsed')
+ *   CSS class .sidebar--collapsed drives all visual changes via main.css.
+ */
 import store           from '../store.js';
 import EventBus        from '../utils/eventBus.js';
 import PluginRegistry  from '../core/PluginRegistry.js';
 import { openProfileModal } from './Modal.js';
+import { t } from '../utils/i18n.js';
 
 const DEFAULT_AVATAR = `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><circle cx='32' cy='32' r='32' fill='%23333'/><circle cx='32' cy='24' r='12' fill='%23666'/><ellipse cx='32' cy='56' rx='20' ry='14' fill='%23666'/></svg>`;
 
-let _el = null;
+// Module-level so _collapsed survives _rebuild() which wipes innerHTML
+let _el        = null;
+let _collapsed = false;
 
 export function initSidebar(el) {
   _el = el;
+
+  // Restore collapse preference from previous session
+  _collapsed = localStorage.getItem('sb_collapsed') === '1';
+
   _rebuild(el);
 
+  // Re-render when view changes (to update active highlight)
   EventBus.on('store:currentView', () => _highlightActive(el));
-  EventBus.on('plugins:ready',     () => _rebuild(el));
-  EventBus.on('lang:change',       () => _rebuild(el));
 
+  // Re-render when plugins load or language changes
+  // — this is what makes nav labels switch language without a page reload
+  EventBus.on('plugins:ready', () => _rebuild(el));
+  EventBus.on('lang:change',   () => _rebuild(el));
+
+  // Lightweight avatar/name patch — avoids a full rebuild on profile save
   EventBus.on('store:settings', (s) => {
     const avatarEl = el.querySelector('.sb-avatar');
     const nameEl   = el.querySelector('.sb-nickname');
@@ -26,8 +52,10 @@ export function initSidebar(el) {
   EventBus.on('store:loggedUser', () => _rebuild(el));
 }
 
+// Full re-render; re-applies collapsed class because innerHTML wipes element classes
 function _rebuild(el) {
   el.innerHTML = _html(store.state.settings || {});
+  if (_collapsed) el.classList.add('sidebar--collapsed');
   _bind(el);
   _highlightActive(el);
 }
@@ -39,12 +67,33 @@ function _highlightActive(el) {
   );
 }
 
+// Toggle sidebar between expanded and icon-only collapsed mode
+function _toggleCollapse(el) {
+  _collapsed = !_collapsed;
+  localStorage.setItem('sb_collapsed', _collapsed ? '1' : '0');
+  el.classList.toggle('sidebar--collapsed', _collapsed);
+
+  // Update button arrow without rebuilding; t() resolves to current language
+  const btn = el.querySelector('#sb-collapse-btn');
+  if (btn) {
+    btn.title     = _collapsed ? t('sidebar_expand') : t('sidebar_collapse');
+    btn.innerHTML = _collapsed ? '›' : '‹';
+  }
+}
+
+/**
+ * Build a single nav anchor.
+ * labelKey → i18n lookup (updates when language changes via _rebuild).
+ * Falls back to n.label for items that don't carry a key (legacy compat).
+ */
 function _navItem(n, cur) {
-  return `<a class="nav-item ${cur === n.view ? 'active' : ''}" data-view="${n.view}" role="button" tabindex="0">
-    <span class="nav-icon">${n.icon}</span><span>${n.label}</span>
+  const label = n.labelKey ? t(n.labelKey) : (n.label || '');
+  return `<a class="nav-item${cur === n.view ? ' active' : ''}" data-view="${n.view}" role="button" tabindex="0">
+    <span class="nav-icon">${n.icon}</span><span class="nav-label">${label}</span>
   </a>`;
 }
 
+// Build full sidebar HTML from current store + plugin state
 function _html(s = {}) {
   const cfg         = store.state.appConfig;
   const loggedUser  = store.state.loggedUser;
@@ -52,18 +101,19 @@ function _html(s = {}) {
   const pluginNav   = PluginRegistry.getNavItems();
   const cur         = store.state.currentView;
 
-  // starcho items (music) come first, other plugins after a divider
+  // Starcho (music) items appear above the separator; all others below as "Modules"
   const musicItems  = pluginNav.filter(n => n.view.startsWith('starcho:'));
   const moduleItems = pluginNav.filter(n => !n.view.startsWith('starcho:'));
 
-  const musicHtml = musicItems.map(n => _navItem(n, cur)).join('');
-
+  const musicHtml   = musicItems.map(n => _navItem(n, cur)).join('');
   const modulesHtml = moduleItems.length
-    ? `<div class="nav-section-label">Módulos</div>
+    ? `<div class="nav-section-label">${t('nav_modules')}</div>
        ${moduleItems.map(n => _navItem(n, cur)).join('')}`
     : '';
 
-  const settingsHtml = _navItem({ view: 'settings', icon: '⚙️', label: 'Configuración' }, cur);
+  // Arrow icon reflects current state so it's correct after a _rebuild triggered by lang:change
+  const collapseTitle = _collapsed ? t('sidebar_expand') : t('sidebar_collapse');
+  const collapseIcon  = _collapsed ? '›' : '‹';
 
   return `
     <div class="sidebar-logo">
@@ -84,14 +134,16 @@ function _html(s = {}) {
         <span class="logo-text">${cfg.appName}</span>
         <span class="logo-slogan">${cfg.logoText || cfg.appSlogan}</span>
       </div>
+      <!-- Collapse toggle: ‹ collapse / › expand -->
+      <button class="sb-collapse-btn" id="sb-collapse-btn" title="${collapseTitle}">${collapseIcon}</button>
     </div>
 
     <nav class="sidebar-nav" id="sidebar-nav">
-      ${_navItem({ view: 'home', icon: '🏠', label: 'Inicio' }, cur)}
+      ${_navItem({ view: 'home', icon: '🏠', labelKey: 'nav_home' }, cur)}
       ${musicHtml ? `<div class="nav-separator"></div>${musicHtml}` : ''}
       ${modulesHtml ? `<div class="nav-separator"></div>${modulesHtml}` : ''}
       <div class="nav-separator"></div>
-      ${settingsHtml}
+      ${_navItem({ view: 'settings', icon: '⚙️', labelKey: 'nav_settings' }, cur)}
     </nav>
 
     <div class="sidebar-footer">
@@ -112,13 +164,16 @@ function _html(s = {}) {
 }
 
 function _bind(el) {
+  // Each nav item navigates to its view
   el.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', () => store.navigate(item.dataset.view));
   });
 
-  // Clicking the user row opens the profile popup; logout button is handled separately
+  el.querySelector('#sb-collapse-btn')?.addEventListener('click', () => _toggleCollapse(el));
+
+  // User row opens profile modal; stops before reaching the logout button
   el.querySelector('#sidebar-user')?.addEventListener('click', (e) => {
-    if (e.target.closest('#btn-logout')) return; // let logout button handle itself
+    if (e.target.closest('#btn-logout')) return;
     openProfileModal();
   });
 

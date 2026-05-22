@@ -1,6 +1,23 @@
+/**
+ * TaskList.js — full-page task list view for the Tasks plugin.
+ *
+ * Structure:
+ *  - Header bar (title + "New task" button)
+ *  - Status filter strip (All / Pending / In-progress / Done / Cancelled)
+ *  - Task item list (priority colour bar, status cycle button, due-date badge)
+ *  - Edit / Create modal (title, description, status, priority, due date)
+ *
+ * Status cycle order (click the status button to advance):
+ *   pending → in_progress → completed → cancelled → pending
+ */
 import API        from '../../../../src/renderer/utils/api.js';
-import { openModal, showToast, markFieldErrors, clearFieldErrors } from '../../../../src/renderer/components/Modal.js';
-import store from '../../../../src/renderer/store.js';
+import { openModal, showToast, markFieldErrors, clearFieldErrors }
+                  from '../../../../src/renderer/components/Modal.js';
+import store      from '../../../../src/renderer/store.js';
+import { esc, formGroup, grid }
+                  from '../../../../src/renderer/utils/html.js';
+import { viewHeader, filterBar, wireFilters }
+                  from '../../../../src/renderer/components/ui.js';
 
 const STATUS_LABELS = {
   pending:     '⏳ Pendiente',
@@ -15,51 +32,60 @@ const PRIORITY_LABELS = {
   urgent: '🚨 Urgente',
 };
 
+// Filter strip items — value '' means "show all"
 const FILTERS = [
-  { label: 'Todas',      value: '' },
-  { label: '⏳ Pendiente',   value: 'pending' },
-  { label: '🔄 En proceso',  value: 'in_progress' },
-  { label: '✅ Completada',  value: 'completed' },
-  { label: '❌ Cancelada',   value: 'cancelled' },
+  { label: 'Todas',           value: '' },
+  { label: '⏳ Pendiente',    value: 'pending' },
+  { label: '🔄 En proceso',   value: 'in_progress' },
+  { label: '✅ Completada',   value: 'completed' },
+  { label: '❌ Cancelada',    value: 'cancelled' },
 ];
 
+// Module-level active filter (reset on each renderTaskList call)
 let _activeFilter = '';
 
 export async function renderTaskList(el) {
   _activeFilter = '';
 
   el.innerHTML = `<div class="tk-container">
-    <div class="tk-header">
-      <h2>✅ Tareas</h2>
-      <button class="tk-new-btn" id="tk-new-btn">+ Nueva tarea</button>
-    </div>
-    <div class="tk-filters" id="tk-filters">
-      ${FILTERS.map(f => `<button class="tk-filter ${f.value === '' ? 'active' : ''}"
-        data-status="${f.value}">${f.label}</button>`).join('')}
-    </div>
+    ${viewHeader('✅ Tareas', `<button class="tk-new-btn" id="tk-new-btn">+ Nueva tarea</button>`, 'tk-header')}
+    ${filterBar(FILTERS, '', {
+      dataAttr:  'status',
+      btnClass:  'tk-filter',
+      wrapClass: 'tk-filters',
+      wrapId:    'tk-filters',
+    })}
     <div class="tk-list" id="tk-list"><div class="tk-empty">Cargando…</div></div>
   </div>`;
 
   el.querySelector('#tk-new-btn').addEventListener('click', () => _openForm(null, _refresh));
 
-  el.querySelectorAll('.tk-filter').forEach(btn => {
-    btn.addEventListener('click', () => {
-      _activeFilter = btn.dataset.status;
-      el.querySelectorAll('.tk-filter').forEach(b => b.classList.toggle('active', b === btn));
-      _refresh();
-    });
+  // Wire filter strip — updates _activeFilter and re-fetches
+  wireFilters(el, '.tk-filter', 'status', val => {
+    _activeFilter = val;
+    _refresh();
   });
 
   await _refresh();
 
   async function _refresh() {
+    const listEl   = el.querySelector('#tk-list');
     const username = store.state.loggedUser?.username;
     const q        = username ? { username } : {};
     if (_activeFilter) q.status = _activeFilter;
-    const tasks = await API.tasks.list(q).catch(() => []);
-    _renderList(el.querySelector('#tk-list'), tasks, _refresh);
+
+    try {
+      const tasks = await API.tasks.list(q);
+      _renderList(listEl, tasks, _refresh);
+    } catch (err) {
+      listEl.innerHTML = `<div class="tk-empty" style="color:var(--red)">
+        Error al cargar tareas: ${err.message || 'Error desconocido'}
+      </div>`;
+    }
   }
 }
+
+// ── List renderer ──────────────────────────────────────────────────────────────
 
 function _renderList(container, tasks, refresh) {
   if (!tasks.length) {
@@ -73,8 +99,8 @@ function _renderList(container, tasks, refresh) {
     return `<div class="tk-item ${isDone ? 'done' : ''}" data-id="${t.id}">
       <div class="tk-priority ${t.priority}"></div>
       <div class="tk-main">
-        <div class="tk-title">${_esc(t.title)}</div>
-        ${t.description ? `<div class="tk-desc">${_esc(t.description)}</div>` : ''}
+        <div class="tk-title">${esc(t.title)}</div>
+        ${t.description ? `<div class="tk-desc">${esc(t.description)}</div>` : ''}
       </div>
       <div class="tk-meta">
         <button class="tk-status ${t.status}" data-id="${t.id}" title="Cambiar estado">
@@ -89,12 +115,12 @@ function _renderList(container, tasks, refresh) {
     </div>`;
   }).join('');
 
-  // Cycle status on click
-  const CYCLE = ['pending','in_progress','completed','cancelled'];
+  // Click the status badge to cycle: pending → in_progress → completed → cancelled → …
+  const CYCLE = ['pending', 'in_progress', 'completed', 'cancelled'];
   container.querySelectorAll('.tk-status').forEach(btn => {
     btn.addEventListener('click', async () => {
-      const task   = tasks.find(t => t.id === parseInt(btn.dataset.id));
-      const next   = CYCLE[(CYCLE.indexOf(task.status) + 1) % CYCLE.length];
+      const task = tasks.find(t => t.id === parseInt(btn.dataset.id));
+      const next = CYCLE[(CYCLE.indexOf(task.status) + 1) % CYCLE.length];
       await API.tasks.updateStatus(parseInt(btn.dataset.id), next);
       refresh();
     });
@@ -108,7 +134,7 @@ function _renderList(container, tasks, refresh) {
     });
   });
 
-  // Delete
+  // Delete (soft)
   container.querySelectorAll('.tk-del').forEach(btn => {
     btn.addEventListener('click', async () => {
       if (!confirm('¿Eliminar esta tarea?')) return;
@@ -119,10 +145,12 @@ function _renderList(container, tasks, refresh) {
   });
 }
 
+// ── Create / Edit form modal ───────────────────────────────────────────────────
+
 function _openForm(task, onSaved) {
   const isEdit = !!task;
 
-  const statusOpts = Object.entries(STATUS_LABELS).map(([v, l]) =>
+  const statusOpts   = Object.entries(STATUS_LABELS).map(([v, l]) =>
     `<option value="${v}" ${task?.status === v ? 'selected' : ''}>${l}</option>`).join('');
   const priorityOpts = Object.entries(PRIORITY_LABELS).map(([v, l]) =>
     `<option value="${v}" ${(task?.priority ?? 'medium') === v ? 'selected' : ''}>${l}</option>`).join('');
@@ -130,44 +158,27 @@ function _openForm(task, onSaved) {
   openModal({
     title: isEdit ? '✏️ Editar tarea' : '✅ Nueva tarea',
     content: `
-      <div class="form-group">
-        <label>Título *</label>
-        <input class="form-control" id="tk-f-title" data-field="title" placeholder="Título de la tarea"
-               value="${_esc(task?.title || '')}">
-      </div>
-      <div class="form-group">
-        <label>Descripción</label>
-        <textarea class="form-control" id="tk-f-desc" data-field="description" rows="3" style="resize:vertical"
-          placeholder="Descripción opcional…">${_esc(task?.description || '')}</textarea>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-        <div class="form-group">
-          <label>Estado</label>
-          <select class="form-control" id="tk-f-status" data-field="status">${statusOpts}</select>
-        </div>
-        <div class="form-group">
-          <label>Prioridad</label>
-          <select class="form-control" id="tk-f-priority" data-field="priority">${priorityOpts}</select>
-        </div>
-      </div>
-      <div class="form-group">
-        <label>Fecha límite</label>
-        <input class="form-control" type="date" id="tk-f-due" data-field="due_date" value="${task?.due_date || ''}">
-      </div>`,
+      ${formGroup({ label: 'Título *',    id: 'tk-f-title',    dataField: 'title',       placeholder: 'Título de la tarea',    value: esc(task?.title       || '') })}
+      ${formGroup({ label: 'Descripción', id: 'tk-f-desc',     dataField: 'description', type: 'textarea', rows: 3, placeholder: 'Descripción opcional…', value: esc(task?.description || '') })}
+      ${grid(2, '12px',
+        formGroup({ label: 'Estado',    id: 'tk-f-status',   dataField: 'status',   type: 'select', options: statusOpts }),
+        formGroup({ label: 'Prioridad', id: 'tk-f-priority', dataField: 'priority', type: 'select', options: priorityOpts }),
+      )}
+      ${formGroup({ label: 'Fecha límite', id: 'tk-f-due', dataField: 'due_date', type: 'date', value: task?.due_date || '' })}`,
     actions: [
-      { label: 'Cancelar', class: 'btn-secondary', action: (close) => close() },
+      { label: 'Cancelar', class: 'btn-secondary', action: close => close() },
       {
         label: isEdit ? 'Guardar' : 'Crear',
         class: 'btn-primary',
         action: async (close, formEl) => {
           clearFieldErrors(formEl);
-          const title       = document.getElementById('tk-f-title').value.trim();
-          const description = document.getElementById('tk-f-desc').value.trim();
-          const status      = document.getElementById('tk-f-status').value;
-          const priority    = document.getElementById('tk-f-priority').value;
-          const due_date    = document.getElementById('tk-f-due').value;
-          const username    = store.state.loggedUser?.username;
-          const payload     = { title, description: description || null, status, priority, due_date: due_date || null, username };
+          const title    = formEl.querySelector('#tk-f-title').value.trim();
+          const description = formEl.querySelector('#tk-f-desc').value.trim();
+          const status   = formEl.querySelector('#tk-f-status').value;
+          const priority = formEl.querySelector('#tk-f-priority').value;
+          const due_date = formEl.querySelector('#tk-f-due').value;
+          const username = store.state.loggedUser?.username;
+          const payload  = { title, description: description || null, status, priority, due_date: due_date || null, username };
 
           try {
             if (isEdit) {
@@ -188,11 +199,6 @@ function _openForm(task, onSaved) {
     ],
   });
 
-  setTimeout(() => document.getElementById('tk-f-title')?.focus(), 80);
-}
-
-function _esc(str) {
-  return String(str ?? '')
-    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;');
+  // Scope focus to the last open modal overlay
+  setTimeout(() => document.querySelector('.modal-overlay:last-child #tk-f-title')?.focus(), 80);
 }

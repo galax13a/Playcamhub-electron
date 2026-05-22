@@ -1,8 +1,14 @@
 /**
  * Tasks plugin — frontend registration.
- * Contributes: 1 nav item, 1 view renderer, 1 dashboard content widget.
+ *
+ * Contributes:
+ *  - 1 sidebar nav item  (labelKey: 'nav_tasks' → translated by Sidebar via i18n.t())
+ *  - 1 view renderer     (tasks:list → TaskList.js)
+ *  - 1 dashboard widget  (zone: content, priority 80 — status counts + overdue banner)
  */
 import API from '../../../src/renderer/utils/api.js';
+import { statRow, grid }  from '../../../src/renderer/utils/html.js';
+import { alertBanner }    from '../../../src/renderer/components/ui.js';
 
 export default {
   id: 'tasks',
@@ -18,7 +24,7 @@ export default {
   },
 
   navItems: [
-    { view: 'tasks:list', icon: '✅', label: 'Tareas' },
+    { view: 'tasks:list', icon: '✅', labelKey: 'nav_tasks', label: 'Tasks' },
   ],
 
   views: {
@@ -32,50 +38,31 @@ export default {
 
   dashboardWidgets: [
     {
-      id:       'tasks-summary',
-      zone:     'content',
-      priority: 80,
-      title:    '✅ Tareas',
+      id: 'tasks-summary', zone: 'content', priority: 80, title: '✅ Tareas',
       async render(el) {
         let tasks = [];
         try { tasks = await API.tasks.list(); } catch (_) {}
 
-        const pending   = tasks.filter(t => t.status === 'pending').length;
-        const inProg    = tasks.filter(t => t.status === 'in_progress').length;
-        const done      = tasks.filter(t => t.status === 'completed').length;
-        const overdue   = tasks.filter(t => {
+        const pending = tasks.filter(t => t.status === 'pending').length;
+        const inProg  = tasks.filter(t => t.status === 'in_progress').length;
+        const done    = tasks.filter(t => t.status === 'completed').length;
+        const overdue = tasks.filter(t => {
           if (!t.due_date || t.status === 'completed') return false;
           return new Date(t.due_date) < new Date();
         }).length;
 
-        el.innerHTML = `
-          <div style="display:flex;flex-direction:column;gap:10px">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-              ${_row('🕐', 'Pendientes',  pending)}
-              ${_row('🔄', 'En progreso', inProg)}
-              ${_row('✅', 'Completadas', done)}
-              ${_row('⚠️', 'Vencidas',    overdue)}
-            </div>
-            ${overdue > 0 ? `
-              <div style="background:rgba(255,50,50,.1);border:1px solid rgba(255,50,50,.25);
-                          border-radius:var(--radius-sm);padding:8px 12px;
-                          font-size:12px;color:var(--red)">
-                ⚠ Tienes ${overdue} tarea${overdue > 1 ? 's' : ''} vencida${overdue > 1 ? 's' : ''}
-              </div>` : ''}
-          </div>`;
+        el.innerHTML = `<div style="display:flex;flex-direction:column;gap:10px">
+          ${grid(2, '8px',
+            statRow('🕐', 'Pendientes',  pending),
+            statRow('🔄', 'En progreso', inProg),
+            statRow('✅', 'Completadas', done),
+            statRow('⚠️', 'Vencidas',    overdue),
+          )}
+          ${overdue > 0
+            ? alertBanner(`⚠ Tienes ${overdue} tarea${overdue > 1 ? 's' : ''} vencida${overdue > 1 ? 's' : ''}`)
+            : ''}
+        </div>`;
       },
     },
   ],
 };
-
-function _row(icon, label, value) {
-  return `
-    <div style="background:var(--bg-3);border-radius:var(--radius-sm);
-                padding:10px 12px;display:flex;align-items:center;gap:8px">
-      <span style="font-size:18px">${icon}</span>
-      <div>
-        <div style="font-size:16px;font-weight:700;color:var(--text-primary)">${value}</div>
-        <div style="font-size:11px;color:var(--text-muted)">${label}</div>
-      </div>
-    </div>`;
-}

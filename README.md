@@ -2,7 +2,7 @@
 
 > Starkit para construir apps de escritorio con Electron + Express + SQLite + vanilla JS.
 
-StarchoElectron es una plantilla de arranque ("starkit") lista para producción. Incluye autenticación local, temas visuales, i18n, sistema de plugins con dashboard widget API, mini-player IPC, manejador de errores, validación con Zod, y una app de música de ejemplo completa. Clona, crea tu plugin y lanza.
+StarchoElectron es una plantilla de arranque ("starkit") lista para producción. Incluye autenticación local, temas visuales, i18n (EN/ES/PT), sistema de plugins con dashboard widget API, sidebar colapsable y responsive, mini-player IPC, manejador de errores global, validación con Zod, perfil de usuario con avatar, y una app de música de ejemplo completa. Clona, crea tu plugin y lanza.
 
 ---
 
@@ -10,17 +10,18 @@ StarchoElectron es una plantilla de arranque ("starkit") lista para producción.
 
 | Capa | Qué trae resuelto |
 |------|-------------------|
-| **Electron** | Ventana frameless, título bar custom, controles (min/max/close), single instance lock, arranque maximizado |
+| **Electron** | Ventana frameless, título bar custom con nombre + versión, controles (min/max/close), single instance lock, arranque maximizado |
 | **Seguridad** | `IS_PROD`/`IS_DEV` automático, sandbox, devTools off, Chromium flags, CSP en renderer |
 | **Backend local** | Express en `localhost:PORT`, auto-incremento de puerto, CORS, rutas REST |
 | **Base de datos** | SQLite (better-sqlite3), WAL mode, migraciones idempotentes, settings de plugins en DB |
-| **Frontend** | ES Modules sin bundler, router hash, store reactivo, EventBus, i18n (EN/ES/PT) |
+| **Frontend** | ES Modules sin bundler, router hash, store reactivo, EventBus, i18n (EN/ES/PT) reactivo |
 | **Autenticación** | Login/registro local, "recordar sesión" con auto-login, hash SHA-256, recuerda última ruta |
 | **Settings** | Todos los ajustes guardados en SQLite — cero localStorage para settings |
 | **Temas UI** | 12 temas CSS (`data-theme`): dark, light, matrix, winamp, rickmorty, kick, pink, red, military, arcade, neon, ocean |
 | **Temas login** | 8 pantallas de login intercambiables: nebula, split, glass, kick, arcade, galax, cyber, lux |
-| **Plugins** | Sistema tipo WordPress — cada plugin registra rutas Express, vistas en Sidebar, y widgets en el Dashboard |
-| **Dashboard** | Home screen con widgets por zona (header/content), estadísticas del sistema (CPU, RAM), acciones rápidas |
+| **Plugins** | Sistema tipo WordPress — cada plugin registra rutas Express, vistas, widgets de dashboard, y etiquetas i18n |
+| **Dashboard** | Home screen con widgets por zona (header/content), estadísticas CPU/RAM, acciones rápidas |
+| **Sidebar** | Colapsable (icon-only), responsive, labels en el idioma activo, persistido en localStorage |
 | **Perfil** | Modal de edición de avatar + datos de perfil desde cualquier punto de la app |
 | **Error manager** | `window.onerror` + `unhandledrejection` → log en consola y archivo `errors.log` (viewer en Settings, solo dev) |
 | **Validación** | Zod v3 en todos los endpoints backend — errores con marcado de campo en el frontend |
@@ -53,8 +54,6 @@ npm run build         # Todas las plataformas
 
 ## Modos de ejecución
 
-El starkit detecta automáticamente si corre en producción o desarrollo:
-
 | Comportamiento | Desarrollo (`npm run dev`) | Producción (app empaquetada) |
 |----------------|---------------------------|------------------------------|
 | DevTools | Disponible (F12, o `DEVTOOLS=true` en `.env`) | Completamente bloqueado |
@@ -76,7 +75,7 @@ El starkit detecta automáticamente si corre en producción o desarrollo:
 | `dark` | Dark | Oscuro por defecto |
 | `light` | Light | Claro |
 | `matrix` | Matrix | Verde terminal |
-| `winamp` | Winamp | Retro gris |
+| `winamp` | WinAmp | Retro gris |
 | `rickmorty` | Rick & Morty | Ciencia ficción |
 | `kick` | Kick | Verde brillante |
 | `pink` | Pink | Rosa vibrante |
@@ -100,6 +99,157 @@ El starkit detecta automáticamente si corre en producción o desarrollo:
 | `galax` | Galax | Galaxia animada |
 | `cyber` | Cyber | Grid neón, glitch, scanlines |
 | `lux` | Lux | Dorado premium |
+
+---
+
+## i18n — Sistema de internacionalización
+
+El starkit soporta 3 idiomas de forma nativa: **Inglés (en)**, **Español (es)** y **Portugués (pt)**.
+
+### Cómo funciona
+
+```
+src/renderer/utils/i18n.js
+  └── T = { en: {...}, es: {...}, pt: {...} }   // diccionario
+  └── t(key)           // traduce al idioma activo
+  └── setLang(lang)    // cambia idioma → emite 'lang:change'
+  └── getLang()        // idioma activo
+  └── LANGUAGES[]      // lista de idiomas para el selector de Settings
+```
+
+Cuando el usuario cambia idioma en Settings:
+
+1. `setLang('es')` actualiza `_lang` y el store emite `lang:change`.
+2. **Sidebar** escucha `lang:change` → llama `_rebuild()` → re-renderiza todos los nav items usando `t(n.labelKey)`.
+3. Cualquier otro componente puede escuchar `lang:change` en EventBus y actualizar su propio HTML.
+
+### Agregar claves de traducción
+
+```js
+// src/renderer/utils/i18n.js — dentro del bloque en, es y pt:
+en: { mi_clave: 'My value' },
+es: { mi_clave: 'Mi valor' },
+pt: { mi_clave: 'Meu valor' },
+```
+
+### Usar en componentes
+
+```js
+import { t } from '../utils/i18n.js';
+
+// Render estático (regenera en rebuild)
+el.innerHTML = `<h2>${t('mi_clave')}</h2>`;
+
+// Escuchar cambios de idioma
+EventBus.on('lang:change', () => el.innerHTML = renderFn());
+```
+
+### Nav items y `labelKey`
+
+Los plugins registran sus nav items con **`labelKey`** en lugar de un label hardcodeado:
+
+```js
+// plugins/mi-plugin/frontend/index.js
+navItems: [
+  { view: 'mi-plugin:list', icon: '🔌', labelKey: 'nav_mi_plugin', label: 'Fallback' },
+]
+```
+
+El Sidebar llama `t(n.labelKey)` al renderizar, así el label cambia de idioma automáticamente sin recargar el plugin. El campo `label` actúa de fallback si la clave no existe en el diccionario.
+
+**Claves de nav registradas:**
+
+| Clave | EN | ES | PT |
+|-------|----|----|----|
+| `nav_home` | Home | Inicio | Início |
+| `nav_library` | Library | Biblioteca | Biblioteca |
+| `nav_youtube` | YouTube | YouTube | YouTube |
+| `nav_import` | Import | Importar | Importar |
+| `nav_history` | History | Historial | Histórico |
+| `nav_settings` | Settings | Configuración | Configurações |
+| `nav_notes` | Notes | Notas | Notas |
+| `nav_tasks` | Tasks | Tareas | Tarefas |
+| `nav_contacts` | Contacts | Contactos | Contatos |
+| `nav_modules` | Modules | Módulos | Módulos |
+| `sidebar_collapse` | Collapse sidebar | Ocultar menú | Ocultar menu |
+| `sidebar_expand` | Expand sidebar | Mostrar menú | Mostrar menu |
+
+---
+
+## Sidebar — Colapsable y Responsive
+
+### Sidebar colapsable
+
+El sidebar tiene un botón `‹ ›` en la zona del logo que alterna entre modo expandido y modo icon-only (56 px de ancho). El estado se persiste en `localStorage('sb_collapsed')`.
+
+```
+Expandido:   [Logo + texto]  [‹]     Nav items con icono + texto
+Colapsado:   [Logo]         [›]     Solo iconos, sin texto ni separadores de sección
+```
+
+**Cómo funciona internamente:**
+
+```js
+// Sidebar.js
+_collapsed = localStorage.getItem('sb_collapsed') === '1';
+
+function _toggleCollapse(el) {
+  _collapsed = !_collapsed;
+  localStorage.setItem('sb_collapsed', _collapsed ? '1' : '0');
+  el.classList.toggle('sidebar--collapsed', _collapsed);
+  // Solo actualiza el botón — no necesita rebuild completo
+}
+```
+
+La clase `.sidebar--collapsed` en `#sidebar` controla todo lo visual via CSS:
+
+```css
+/* main.css */
+.sidebar--collapsed           { width: 56px !important; }
+.sidebar--collapsed .nav-label,
+.sidebar--collapsed .logo-text-group { display: none; }
+.sidebar--collapsed .nav-item { justify-content: center; }
+```
+
+### Responsive layout
+
+| Ancho de ventana | Comportamiento |
+|-----------------|----------------|
+| > 900 px | Sidebar expandido/colapsado según preferencia del usuario |
+| 600 – 900 px | Sidebar se fuerza a modo icon-only (56 px), botón de colapso oculto |
+| ≤ 600 px | Sidebar se convierte en overlay deslizable; hamburger `☰` en el title bar |
+
+**Mobile overlay** (≤ 600 px):
+
+```
+Title bar: [☰ Hamburger] [Logo] [v1.0.0] [min][max][x]
+
+Sidebar: position:fixed, transform:translateX(-100%)   ← oculto por defecto
+         + clase .mobile-open → transform:translateX(0) ← visible al hacer tap en ☰
+         + backdrop #sidebar-overlay con opacity fade
+```
+
+El sidebar se cierra automáticamente al tocar un nav item o el backdrop.
+
+---
+
+## Barra de título con versión
+
+El campo central de la title bar muestra `AppName vX.Y.Z`. Los valores se leen de `APP_NAME` y `APP_VERSION` en `.env` vía el backend y se exponen en el config endpoint:
+
+```js
+// app.js — después de store.loadConfig()
+const _cfg = store.state.appConfig;
+_tb.textContent = `${_cfg.appName} v${_cfg.appVersion}`;
+// → "StarchoElectron v1.0.0"
+```
+
+Para cambiar la versión edita `.env`:
+
+```env
+APP_NAME=Mi App
+APP_VERSION=2.0.0
+```
 
 ---
 
@@ -133,15 +283,17 @@ export default {
 
   // Se llama una vez al cargar — ideal para inyectar CSS
   onLoad() {
+    if (document.getElementById('mi-plugin-css')) return;
     const link = document.createElement('link');
+    link.id   = 'mi-plugin-css';
     link.rel  = 'stylesheet';
     link.href = new URL('./styles/mi-plugin.css', import.meta.url).href;
     document.head.appendChild(link);
   },
 
-  // Ítems que aparecen en el Sidebar bajo "Módulos"
+  // labelKey → el Sidebar llama t(labelKey) para traducción automática
   navItems: [
-    { view: 'mi-plugin:list', icon: '🔌', label: 'Mi Plugin' },
+    { view: 'mi-plugin:list', icon: '🔌', labelKey: 'nav_mi_plugin', label: 'Mi Plugin' },
   ],
 
   // Vistas que el router puede renderizar
@@ -157,15 +309,30 @@ export default {
     {
       id:       'mi-plugin-card',
       zone:     'content',   // 'header' | 'content'
-      priority: 50,          // mayor = se muestra primero
+      priority: 50,          // mayor = se muestra primero en la zona
       title:    '🔌 Mi Plugin',
       async render(el) {
-        // Render HTML + bind events in el
         el.innerHTML = `<div>Hola desde mi plugin</div>`;
       },
     },
   ],
 };
+```
+
+### Ciclo de vida de un plugin
+
+```
+boot()
+  └── PluginRegistry.init()
+        └── API.plugins.list()           → lista plugins habilitados en DB
+        └── import(plugin/frontend/index.js)
+              └── plugin.onLoad()        → inyecta CSS
+              └── _navItems.push(...)    → aparece en Sidebar
+              └── _views[key] = fn       → el router puede navegar a esa vista
+              └── _dashboardWidgets.push → el Dashboard renderiza el widget
+        └── EventBus.emit('plugins:ready')
+              └── Sidebar._rebuild()     → usa t(labelKey) para traducir labels
+              └── Dashboard.render()     → llama PluginRegistry.renderDashboardZone()
 ```
 
 ### Settings de plugin desde la base de datos
@@ -184,6 +351,182 @@ await API.plugins.setSetting('mi-plugin', 'sort_by', 'title');
 await API.plugins.setSettings('mi-plugin', { sort_by: 'title', items_per_page: '50' });
 ```
 
+**Backend:**
+
+```
+GET  /api/plugins/:id/settings  → lee plugin_{id}_* de la tabla settings, retorna sin prefijo
+POST /api/plugins/:id/settings  → acepta { key, value } o { settings: { key: value, ... } }
+```
+
+---
+
+## Dashboard y Widgets
+
+El Dashboard (`home`) tiene zonas donde los plugins contribuyen contenido:
+
+| Zona | Descripción | Quién la usa |
+|------|-------------|--------------|
+| `header` | Franja ancha superior | starcho-now-playing (transport controls) |
+| `content` | Grid de tarjetas | starcho (biblioteca), notes, tasks, contacts |
+
+Además muestra:
+- **CPU y RAM** en tiempo real — muestreadas cada 3 s via IPC `system:stats`
+- **Acciones rápidas** — un botón por cada nav item registrado por todos los plugins activos
+- **Botón de perfil** — abre el modal de edición directamente
+
+### Renderizado de una zona
+
+```js
+// Dashboard.js
+await PluginRegistry.renderDashboardZone('content', container);
+
+// PluginRegistry — filtra por zona, ordena por priority DESC, renderiza en paralelo
+for (const w of widgets) {
+  const wrapper = createElement('.dash-widget');
+  wrapper.innerHTML = '<loading>';
+  container.appendChild(wrapper);
+  await w.render(wrapper.querySelector('.dash-widget-body'));
+}
+```
+
+### Agregar un widget desde un plugin
+
+```js
+dashboardWidgets: [
+  {
+    id:       'mi-widget',
+    zone:     'content',
+    priority: 50,          // 100 = primero, 0 = último
+    title:    '🔌 Mi widget',
+    async render(el) {
+      const data = await API.miPlugin.getData();
+      el.innerHTML = `<div>${data.count} items</div>`;
+    },
+  },
+],
+```
+
+---
+
+## Librería de componentes compartidos
+
+El starkit incluye dos módulos de utilidades que **eliminan la duplicación de código** entre plugins y componentes del renderer. Cualquier plugin puede importarlos usando rutas relativas desde su carpeta.
+
+### `src/renderer/utils/html.js` — Constructores de HTML
+
+Funciones puras que devuelven strings HTML. Cero manipulación del DOM.
+
+| Función | Descripción |
+|---------|-------------|
+| `esc(v)` | Escapa un valor para inserción segura como texto HTML (`&`, `<`, `>`, `"`) |
+| `attr(v)` | Escapa un valor para uso seguro dentro de un atributo HTML |
+| `statRow(icon, label, value)` | Tarjeta de stat para widgets del dashboard (bg-3, icono + valor grande + label) |
+| `badge(label, color)` | Badge inline coloreado (ej: estado de contacto) |
+| `grid(cols, gap, ...children)` | Contenedor CSS grid — agrupa children en columnas iguales |
+| `formGroup({ label, id, type, placeholder, value, ... })` | Bloque `.form-group > label + .form-control` completo |
+
+**Uso desde un plugin:**
+
+```js
+import { esc, formGroup, grid, statRow, badge } from '../../../src/renderer/utils/html.js';
+
+// En un widget del dashboard
+el.innerHTML = grid(2, '8px',
+  statRow('📝', 'Total', notes.length),
+  statRow('📅', 'Con fecha', withDate),
+);
+
+// En un modal de formulario
+content: `
+  ${formGroup({ label: 'Nombre *', id: 'cf-name', dataField: 'name', value: esc(c.name) })}
+  ${grid(2, '12px',
+    formGroup({ label: 'Email', id: 'cf-email', type: 'email', value: esc(c.email) }),
+    formGroup({ label: 'Estado', id: 'cf-status', type: 'select', options: statusOpts }),
+  )}
+  ${formGroup({ label: 'Notas', id: 'cf-notes', type: 'textarea', rows: 3, value: esc(c.notes) })}`,
+```
+
+**Tipos soportados por `formGroup`:** `text` | `email` | `tel` | `date` | `textarea` | `select` | `hidden`
+
+El parámetro `dataField` controla el atributo `data-field` (usado por `markFieldErrors()`). Si se omite, toma el valor de `id`.
+
+---
+
+### `src/renderer/components/ui.js` — Bloques de UI
+
+Componentes de nivel alto que devuelven HTML strings o vinculan eventos DOM.
+
+| Función | Descripción |
+|---------|-------------|
+| `emptyState({ icon, title, desc, cls })` | Estado vacío completo: icono grande + h3 + párrafo |
+| `loading(height)` | Spinner centrado (usa `.spinner` de main.css) |
+| `viewHeader(title, right, cls)` | Cabecera de vista: título izquierda + botones/buscador derecha |
+| `filterBar(items, activeVal, opts)` | Strip de botones de filtro con estado `.active` |
+| `wireFilters(el, btnSel, dataAttr, onChange)` | Vincula los clicks del filterBar, llama `onChange(value)` |
+| `recentList(items, renderItem)` | Lista de ítems recientes separada por borde superior |
+| `alertBanner(text, { bg, border, color })` | Banner de alerta/advertencia coloreado |
+
+**Uso desde un plugin:**
+
+```js
+import { viewHeader, filterBar, wireFilters, emptyState, alertBanner }
+  from '../../../src/renderer/components/ui.js';
+
+// Cabecera de vista
+el.innerHTML = `<div class="ct-container">
+  ${viewHeader('👥 Contactos',
+    `<input id="ct-search" class="form-control" placeholder="🔍 Buscar…">
+     <button id="ct-new-btn">+ Nuevo</button>`,
+    'ct-header'
+  )}
+  ${filterBar(FILTERS, _activeStatus, { dataAttr: 'status', btnClass: 'ct-filter', wrapClass: 'ct-filters' })}
+  <div class="ct-grid" id="ct-grid"></div>
+</div>`;
+
+// Vincular los filtros
+wireFilters(el, '.ct-filter', 'status', val => {
+  _activeStatus = val;
+  _refresh();
+});
+
+// Estado vacío
+container.innerHTML = emptyState({ icon: '👥', title: 'Sin contactos', desc: 'Agrega el primero.' });
+
+// Banner de tareas vencidas
+el.innerHTML += overdue > 0 ? alertBanner(`⚠ Tienes ${overdue} tareas vencidas`) : '';
+```
+
+---
+
+### `src/renderer/utils/formatters.js` — Formatters compartidos
+
+| Función | Descripción |
+|---------|-------------|
+| `formatDuration(seconds)` | `m:ss` — para Player y Library |
+| `formatCount(n)` | `1.2K`, `3.4M` — para conteos grandes |
+| `timeAgo(dateStr)` | `"2h ago"`, `"3d ago"` — tiempo relativo |
+| `truncate(str, len)` | Corta y agrega `…` si supera el largo |
+| `sanitizeHTML(str)` | Sanitiza via `textContent` |
+| `greeting()` | `"Buenos días"` / `"Buenas tardes"` / `"Buenas noches"` |
+| `dateStr()` | Fecha larga en español (`"viernes, 22 de mayo de 2026"`) |
+| `fmtBytes(bytes)` | `"1.2 MB"`, `"3.4 GB"` — para tamaños de archivo |
+
+---
+
+## Perfil de usuario
+
+El perfil se edita mediante un **popup modal** accesible desde:
+- El avatar/nombre en la barra lateral (clic en el área del usuario)
+- El botón 👤 en el Dashboard
+
+Permite editar: avatar (crop 128×128), nombre completo, apodo, WhatsApp.
+Los datos se guardan en la tabla `users` y se reflejan inmediatamente en el store y el sidebar.
+
+```js
+import { openProfileModal } from './components/Modal.js';
+openProfileModal(); // abre desde cualquier lugar del renderer
+```
+
 ---
 
 ## Manejador de Errores
@@ -192,7 +535,7 @@ await API.plugins.setSettings('mi-plugin', { sort_by: 'title', items_per_page: '
 // src/renderer/utils/errorHandler.js
 import { logError, logWarn, initErrorHandler } from './utils/errorHandler.js';
 
-// Inicializado en boot (app.js)
+// Inicializado automáticamente en boot (app.js)
 initErrorHandler(); // hookea window.onerror + unhandledrejection
 
 // Uso manual en cualquier catch
@@ -204,33 +547,6 @@ try {
 ```
 
 El log se guarda en `{userData}/errors.log` y se puede ver/limpiar desde **Settings → Dev Log** (solo en modo desarrollo).
-
----
-
-## Dashboard y Widgets
-
-El Dashboard (`home`) tiene estas zonas donde los plugins pueden contribuir contenido:
-
-| Zona | CSS container | Descripción |
-|------|--------------|-------------|
-| `header` | `#dash-zone-header` | Franja ancha superior (ej. "Reproduciendo ahora") |
-| `content` | `#dash-zone-content` | Grid de tarjetas resumen por plugin |
-
-El Dashboard también muestra:
-- **Rendimiento del sistema**: CPU %, RAM usada/total — refrescado cada 3 s via IPC
-- **Acciones rápidas**: Un botón por cada nav item registrado por todos los plugins activos
-- **Botón de perfil** (👤): Abre el modal de edición de perfil directamente
-
----
-
-## Perfil de usuario
-
-El perfil se edita mediante un **popup modal** accesible desde:
-- El avatar/nombre en la barra lateral (clic en el área del usuario)
-- El botón 👤 en el Dashboard
-
-Permite editar: avatar (crop 128×128), nombre completo, apodo, WhatsApp.
-Los datos se guardan en la tabla `users` y se reflejan inmediatamente en el store.
 
 ---
 
@@ -258,9 +574,9 @@ El backend Express expone los siguientes endpoints bajo `/api/`:
 ## Variables de entorno (`.env`)
 
 ```env
-APP_NAME=Mi App
-APP_SLOGAN=Descripción breve
-APP_VERSION=1.0.0
+APP_NAME=Mi App           # Aparece en sidebar y title bar
+APP_SLOGAN=Descripción    # Sub-texto del logo en sidebar
+APP_VERSION=1.0.0         # Aparece en title bar como "Mi App v1.0.0"
 LOGO_TEXT=Mi App
 
 DEVTOOLS=false     # true → abre DevTools al arrancar (solo dev)
@@ -277,6 +593,33 @@ NODE_ENV=development
 | Error log | `%APPDATA%/{appName}/errors.log` |
 | Media descargada | `%APPDATA%/{appName}/music/` |
 | Thumbnails | `%APPDATA%/{appName}/thumbnails/` |
+
+---
+
+## Arquitectura del renderer
+
+```
+src/renderer/
+  app.js              ← Boot, wiring, versión en title bar, hamburger mobile
+  router.js           ← Hash router, mapa view-key → elemento DOM
+  store.js            ← Estado global reactivo (setState → EventBus.emit)
+  core/
+    PluginRegistry.js ← Carga plugins, colecciona navItems/views/widgets
+  components/
+    Sidebar.js        ← Nav colapsable, i18n via t(labelKey), EventBus listener
+    Dashboard.js      ← Zonas header/content, system stats, quick actions
+    Player.js         ← Barra de reproducción, IPC con mini-player
+    Modal.js          ← Modales genéricos + openProfileModal()
+    Settings.js       ← Tabs de configuración, dev log, plugin settings
+    ui.js             ← Bloques de UI reutilizables: emptyState, viewHeader, filterBar, wireFilters, recentList, alertBanner, loading
+  utils/
+    api.js            ← Cliente HTTP hacia Express backend
+    i18n.js           ← Diccionario EN/ES/PT, t(key), setLang(), THEMES, LANGUAGES
+    eventBus.js       ← Pub/sub liviano (on, off, emit)
+    errorHandler.js   ← initErrorHandler, logError, logWarn
+    html.js           ← Constructores HTML puros: esc, attr, statRow, badge, grid, formGroup
+    formatters.js     ← greeting, dateStr, fmtBytes, timeAgo, formatDuration, truncate
+```
 
 ---
 

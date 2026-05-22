@@ -78,7 +78,12 @@ export function openModal({ title, content, actions = [] }) {
   _container.appendChild(overlay);
   requestAnimationFrame(() => overlay.classList.add('open'));
 
-  function close() { overlay.classList.remove('open'); setTimeout(() => overlay.remove(), 220); }
+  function close() {
+    overlay.querySelector('.modal')?.classList.add('closing');
+    overlay.classList.add('closing');
+    overlay.classList.remove('open');
+    setTimeout(() => overlay.remove(), 300);
+  }
 
   const bodyEl = overlay.querySelector('.modal-body');
 

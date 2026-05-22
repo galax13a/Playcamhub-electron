@@ -30,3 +30,38 @@ export function sanitizeHTML(str) {
   d.textContent = str || '';
   return d.innerHTML;
 }
+
+/**
+ * Returns a time-of-day greeting in Spanish.
+ * Used by Dashboard to personalise the welcome message.
+ */
+export function greeting() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Buenos días';
+  if (h < 18) return 'Buenas tardes';
+  return 'Buenas noches';
+}
+
+/**
+ * Returns the current date formatted as a long localized string in Spanish
+ * (e.g. "viernes, 22 de mayo de 2026").
+ */
+export function dateStr() {
+  return new Date().toLocaleDateString('es-ES', {
+    weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
+  });
+}
+
+/**
+ * Formats a byte count into a human-readable string (KB / MB / GB).
+ * Returns '0 B' for falsy input.
+ *
+ * @param {number} bytes
+ * @returns {string}
+ */
+export function fmtBytes(bytes) {
+  if (!bytes) return '0 B';
+  if (bytes < 1024 ** 2) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 ** 3) return `${(bytes / 1024 ** 2).toFixed(1)} MB`;
+  return `${(bytes / 1024 ** 3).toFixed(2)} GB`;
+}

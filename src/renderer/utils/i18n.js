@@ -3,7 +3,13 @@ import EventBus from './eventBus.js';
 
 const T = {
   en: {
-    // Nav
+    // Sidebar nav labels (used by all plugins via labelKey)
+    nav_home:'Home', nav_library:'Library', nav_youtube:'YouTube',
+    nav_import:'Import', nav_history:'History', nav_settings:'Settings',
+    nav_notes:'Notes', nav_tasks:'Tasks', nav_contacts:'Contacts',
+    nav_modules:'Modules',
+    sidebar_collapse:'Collapse sidebar', sidebar_expand:'Expand sidebar',
+    // Nav (legacy keys kept for compatibility)
     dashboard:'Dashboard', library:'Library', search:'Search',
     upload:'Import Files', history:'History', settings:'Settings',
     // Settings sections
@@ -143,6 +149,12 @@ const T = {
   },
 
   es: {
+    // Etiquetas de nav del sidebar
+    nav_home:'Inicio', nav_library:'Biblioteca', nav_youtube:'YouTube',
+    nav_import:'Importar', nav_history:'Historial', nav_settings:'Configuración',
+    nav_notes:'Notas', nav_tasks:'Tareas', nav_contacts:'Contactos',
+    nav_modules:'Módulos',
+    sidebar_collapse:'Ocultar menú', sidebar_expand:'Mostrar menú',
     dashboard:'Inicio', library:'Biblioteca', search:'Buscar',
     upload:'Importar Archivos', history:'Historial', settings:'Configuración',
     settings_title:'Configuración', profile:'Perfil', appearance:'Apariencia',
@@ -254,6 +266,12 @@ const T = {
   },
 
   pt: {
+    // Rótulos de nav da barra lateral
+    nav_home:'Início', nav_library:'Biblioteca', nav_youtube:'YouTube',
+    nav_import:'Importar', nav_history:'Histórico', nav_settings:'Configurações',
+    nav_notes:'Notas', nav_tasks:'Tarefas', nav_contacts:'Contatos',
+    nav_modules:'Módulos',
+    sidebar_collapse:'Ocultar menu', sidebar_expand:'Mostrar menu',
     dashboard:'Início', library:'Biblioteca', search:'Pesquisar',
     upload:'Importar Arquivos', history:'Histórico', settings:'Configurações',
     settings_title:'Configurações', profile:'Perfil', appearance:'Aparência',

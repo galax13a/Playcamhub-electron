@@ -1,3 +1,18 @@
+/**
+ * app.js — Renderer entry point.
+ *
+ * Boot sequence:
+ *   1. Start global error handler (window.onerror → errors.log via IPC)
+ *   2. Resolve Express port from IPC and point the API client at it
+ *   3. Load settings + app config from the backend (parallel)
+ *   4. Write app name + version to the custom title bar
+ *   5. Init PluginRegistry (loads enabled plugin front-ends, populates nav + widgets)
+ *   6. Load Starcho data (songs, playlists, categories) — only if plugin is active
+ *   7. Wire window controls (min/max/close) and mobile sidebar toggle
+ *   8. Init Sidebar, Player, Router (in that order — sidebar must be ready before routing)
+ *   9. Wire macOS menu shortcuts and auto-updater events
+ *  10. Wire global keyboard shortcuts (Space, Ctrl+←/→, Ctrl+F)
+ */
 import API            from './utils/api.js';
 import store          from './store.js';
 import PluginRegistry from './core/PluginRegistry.js';
@@ -20,9 +35,10 @@ import { initPlayer  } from './components/Player.js';
 import { initModal, showToast } from './components/Modal.js';
 
 async function boot() {
+  // Hook window.onerror + unhandledrejection → console + errors.log in userData
   initErrorHandler();
 
-  // 1. Get server port from Electron IPC
+  // 1. Resolve backend port from Electron IPC (auto-increments if busy)
   if (window.electronAPI) {
     const port = await window.electronAPI.getServerPort();
     API.setBase(`http://127.0.0.1:${port}`);
@@ -34,14 +50,15 @@ async function boot() {
     store.loadConfig(),
   ]);
 
-  // Apply APP_TITLE to the title bar
-  const _tb = document.getElementById('tb-title');
-  if (_tb) _tb.textContent = store.state.appConfig.appTitle || 'StarchoElectron — Dev Platform';
+  // 3. Show "AppName vX.Y.Z" in the custom title bar — reads from .env via backend config
+  const _tb  = document.getElementById('tb-title');
+  const _cfg = store.state.appConfig;
+  if (_tb) _tb.textContent = `${_cfg.appName || 'StarchoElectron'} v${_cfg.appVersion || '1.0.0'}`;
 
-  // 3. Load plugins (frontend) — populates nav items before sidebar renders
+  // 4. Load plugin front-ends — must happen before Sidebar so nav items are available
   await PluginRegistry.init();
 
-  // 4. Load starcho plugin data only if the plugin is active
+  // 5. Load Starcho-specific store data only when the plugin is active
   if (PluginRegistry.getPlugins().some(p => p.id === 'starcho')) {
     await Promise.all([
       store.loadSongs(),
@@ -50,24 +67,24 @@ async function boot() {
     ]);
   }
 
-  // 5. Wire window controls
+  // 6. Wire window controls (includes mobile hamburger sidebar toggle)
   wireWindowControls();
 
-  // 6. Init global UI components
+  // 7. Init global UI components
   initModal();
   initSidebar(document.getElementById('sidebar'));
   initPlayer(document.getElementById('player-bar'));
 
-  // 7. Init router (renders first view)
+  // 8. Init router — renders initial view after sidebar is ready
   initRouter();
 
-  // 8. Wire menu shortcuts from main process
+  // 9. Platform integrations
   if (window.electronAPI) {
     wireMacOSMenu();
     wireUpdaterEvents();
   }
 
-  // 8. Wire global keyboard shortcuts
+  // 10. Global keyboard shortcuts
   wireKeyboard();
 
   console.log('StarchoElectron v1.0.0 ready 🚀');
@@ -80,6 +97,26 @@ function wireWindowControls() {
     window.electronAPI?.maximize());
   document.getElementById('btn-close')?.addEventListener('click', () =>
     window.electronAPI?.close());
+
+  // Mobile hamburger: wires the ☰ button in the title bar to show/hide the sidebar overlay.
+  // Only visible at ≤600 px via CSS; on desktop these elements still exist but are hidden.
+  const hamburger = document.getElementById('btn-hamburger');
+  const sidebar   = document.getElementById('sidebar');
+  const overlay   = document.getElementById('sidebar-overlay');
+  if (hamburger && sidebar && overlay) {
+    const openSidebar  = () => { sidebar.classList.add('mobile-open'); overlay.classList.add('visible'); };
+    const closeSidebar = () => { sidebar.classList.remove('mobile-open'); overlay.classList.remove('visible'); };
+
+    hamburger.addEventListener('click', () =>
+      sidebar.classList.contains('mobile-open') ? closeSidebar() : openSidebar()
+    );
+    // Tapping the backdrop dismisses the sidebar
+    overlay.addEventListener('click', closeSidebar);
+    // Auto-close sidebar after a nav item is tapped on mobile
+    sidebar.addEventListener('click', (e) => {
+      if (e.target.closest('.nav-item') && window.innerWidth <= 600) closeSidebar();
+    });
+  }
 }
 
 function wireMacOSMenu() {
@@ -132,8 +169,8 @@ function wireKeyboard() {
   });
 }
 
-
-// After login, login.js dispatches 'user:login' — load user profile then render
+// After successful login, login.js dispatches 'user:login' with the user payload.
+// We load the full profile then navigate to the last route the user was on.
 window.addEventListener('user:login', async (e) => {
   store.setState({ loggedUser: e.detail });
   await store.loadUserProfile();

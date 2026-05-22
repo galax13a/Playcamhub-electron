@@ -3,8 +3,13 @@
  *
  * Contributes:
  *  - 4 sidebar nav items (Library, YouTube, Import, History)
- *  - 5 view renderers
- *  - 3 dashboard widgets: header "Now Playing" + content Library card + YouTube quick-add
+ *    Each item has a labelKey so the Sidebar can translate the label via i18n.t()
+ *    when the language changes — no rebuild of the plugin is needed.
+ *  - 5 view renderers (library, youtube, upload, history, playlist)
+ *  - 3 dashboard widgets:
+ *      • starcho-now-playing  zone:header  priority:100  — transport controls for current song
+ *      • starcho-library-card zone:content priority:100  — song/playlist count + disk usage
+ *      • starcho-youtube-card zone:content priority:90   — queue stats + quick-add URL input
  */
 import store from '../../../src/renderer/store.js';
 import API   from '../../../src/renderer/utils/api.js';
@@ -14,10 +19,10 @@ export default {
   hasSidebarPlaylists: true,
 
   navItems: [
-    { view: 'starcho:library',  icon: '🎵', label: 'Biblioteca' },
-    { view: 'starcho:youtube',  icon: '📥', label: 'YouTube'    },
-    { view: 'starcho:upload',   icon: '📂', label: 'Importar'   },
-    { view: 'starcho:history',  icon: '🕐', label: 'Historial'  },
+    { view: 'starcho:library',  icon: '🎵', labelKey: 'nav_library',  label: 'Library'  },
+    { view: 'starcho:youtube',  icon: '📥', labelKey: 'nav_youtube',  label: 'YouTube'  },
+    { view: 'starcho:upload',   icon: '📂', labelKey: 'nav_import',   label: 'Import'   },
+    { view: 'starcho:history',  icon: '🕐', labelKey: 'nav_history',  label: 'History'  },
   ],
 
   views: {
