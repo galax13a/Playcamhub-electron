@@ -25,9 +25,20 @@ const { createWindow, getMainWindow } = require('./src/main/windowManager');
 const { registerIpcHandlers } = require('./src/main/ipcHandlers');
 const { buildMenu } = require('./src/main/menuBuilder');
 const { startServer } = require('./src/backend/server');
+const { IS_PROD, IS_DEV } = require('./src/main/env');
 
-log.transports.file.level = 'info';
-log.info('StarchoElectron starting…', app.getVersion());
+log.transports.file.level = IS_PROD ? 'warn' : 'info';
+log.info(`StarchoElectron starting… v${app.getVersion()} [${IS_PROD ? 'PRODUCTION' : 'DEVELOPMENT'}]`);
+
+// ── Chromium security flags (producción) ─────────────────────────────────────
+if (IS_PROD) {
+  // Deshabilita el puerto de depuración remota — impide acceso externo al DevTools protocol
+  app.commandLine.appendSwitch('remote-debugging-port', '0');
+  // Deshabilita las extensiones de Chromium en la ventana
+  app.commandLine.appendSwitch('disable-extensions');
+  // Desactiva el autocompletado de formularios (datos sensibles)
+  app.commandLine.appendSwitch('disable-features', 'AutofillServerCommunication');
+}
 
 // Set App User Model ID so Windows taskbar shows the custom icon
 app.setAppUserModelId(process.env.APP_ID || 'com.starcho.electron');
@@ -71,8 +82,8 @@ app.whenReady().then(async () => {
   createWindow(serverPort);
   registerIpcHandlers(APP_PATHS, serverPort);
 
-  // Init auto-updater only in production
-  if (app.isPackaged) {
+  // Auto-updater — solo en producción
+  if (IS_PROD) {
     const { initUpdater } = require('./src/main/updater');
     initUpdater();
   }

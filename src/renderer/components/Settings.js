@@ -116,7 +116,7 @@ export async function renderSettings(el) {
           <div class="appearance-group-label">Pantalla de login</div>
           <div class="ltheme-grid" id="ltheme-cards">
 
-            <button class="ltheme-card ${(localStorage.getItem('login_theme')||'nebula')==='nebula'?'active':''}" data-ltheme="nebula">
+            <button class="ltheme-card ${(merged.login_theme||'nebula')==='nebula'?'active':''}" data-ltheme="nebula">
               <div class="ltheme-preview ltheme-preview--nebula">
                 <span class="ltp-blob-a"></span>
                 <span class="ltp-blob-b"></span>
@@ -125,7 +125,7 @@ export async function renderSettings(el) {
               <span class="ltheme-label">🌌 Nebula</span>
             </button>
 
-            <button class="ltheme-card ${(localStorage.getItem('login_theme')||'nebula')==='split'?'active':''}" data-ltheme="split">
+            <button class="ltheme-card ${(merged.login_theme||'nebula')==='split'?'active':''}" data-ltheme="split">
               <div class="ltheme-preview ltheme-preview--split">
                 <span class="ltp-left-panel"></span>
                 <span class="ltp-right-panel"><span class="ltp-card-mock"></span></span>
@@ -133,13 +133,40 @@ export async function renderSettings(el) {
               <span class="ltheme-label">🪟 Split</span>
             </button>
 
-            <button class="ltheme-card ${(localStorage.getItem('login_theme')||'nebula')==='glass'?'active':''}" data-ltheme="glass">
+            <button class="ltheme-card ${(merged.login_theme||'nebula')==='glass'?'active':''}" data-ltheme="glass">
               <div class="ltheme-preview ltheme-preview--glass">
                 <span class="ltp-blob-a"></span>
                 <span class="ltp-blob-b"></span>
                 <span class="ltp-card-mock ltp-card-glass"></span>
               </div>
               <span class="ltheme-label">✨ Glass</span>
+            </button>
+
+            <button class="ltheme-card ${(merged.login_theme||'nebula')==='kick'?'active':''}" data-ltheme="kick">
+              <div class="ltheme-preview ltheme-preview--kick">
+                <span class="ltp-blob-a"></span>
+                <span class="ltp-blob-b"></span>
+                <span class="ltp-card-mock ltp-card-kick"></span>
+              </div>
+              <span class="ltheme-label">🟢 Kick</span>
+            </button>
+
+            <button class="ltheme-card ${(merged.login_theme||'nebula')==='arcade'?'active':''}" data-ltheme="arcade">
+              <div class="ltheme-preview ltheme-preview--arcade">
+                <span class="ltp-blob-a"></span>
+                <span class="ltp-blob-b"></span>
+                <span class="ltp-card-mock ltp-card-arcade"></span>
+              </div>
+              <span class="ltheme-label">🕹️ Arcade</span>
+            </button>
+
+            <button class="ltheme-card ${(merged.login_theme||'nebula')==='galax'?'active':''}" data-ltheme="galax">
+              <div class="ltheme-preview ltheme-preview--galax">
+                <span class="ltp-blob-a"></span>
+                <span class="ltp-blob-b"></span>
+                <span class="ltp-card-mock ltp-card-galax"></span>
+              </div>
+              <span class="ltheme-label">🌠 Galax</span>
             </button>
 
           </div>
@@ -514,9 +541,10 @@ function _bindAppearance(el) {
   });
 
   el.querySelectorAll('.ltheme-card').forEach(card => {
-    card.addEventListener('click', () => {
+    card.addEventListener('click', async () => {
       const ltheme = card.dataset.ltheme;
-      localStorage.setItem('login_theme', ltheme);
+      await API.settings.setMany({ login_theme: ltheme });
+      store.setState({ settings: { ...store.state.settings, login_theme: ltheme } });
       el.querySelectorAll('.ltheme-card').forEach(c => {
         c.classList.toggle('active', c === card);
         const lbl = c.querySelector('.ltheme-label');

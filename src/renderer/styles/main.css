@@ -2186,7 +2186,9 @@ select.form-control { cursor: pointer; appearance: none; }
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding-top: var(--titlebar-height);
 }
 
 /* Glow blobs */

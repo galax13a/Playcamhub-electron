@@ -69,10 +69,11 @@ function runMigrations(db) {
 
   // Default settings
   const defaults = [
-    ['theme',    'dark'],
-    ['volume',   '80'],
-    ['auto_play','true'],
-    ['language', 'es'],
+    ['theme',       'dark'],
+    ['volume',      '80'],
+    ['auto_play',   'true'],
+    ['language',    'es'],
+    ['login_theme', 'nebula'],
   ];
   const upsert = db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)');
   defaults.forEach(([k, v]) => upsert.run(k, v));

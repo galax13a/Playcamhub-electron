@@ -234,6 +234,302 @@
 }
 
 /* ════════════════════════════════════════════════════════════════
+   THEME 4 — KICK  (dark + neon green, streaming vibe)
+════════════════════════════════════════════════════════════════ */
+#login-page[data-ltheme="kick"] {
+  background: #050508;
+}
+
+#login-page[data-ltheme="kick"] .lp-blob-1 {
+  width: 600px; height: 600px;
+  background: #53FC18;
+  top: -200px; left: -200px;
+  opacity: .04;
+  filter: blur(100px);
+  animation: lp-kick-g1 8s ease-in-out infinite alternate;
+}
+#login-page[data-ltheme="kick"] .lp-blob-2 {
+  width: 500px; height: 500px;
+  background: #2ECC71;
+  bottom: -150px; right: -150px;
+  opacity: .06;
+  filter: blur(80px);
+  animation: lp-kick-g2 12s ease-in-out infinite alternate;
+}
+@keyframes lp-kick-g1 {
+  from { transform: scale(1); }
+  to   { transform: scale(1.2) translate(20px, 10px); }
+}
+@keyframes lp-kick-g2 {
+  from { transform: scale(1); }
+  to   { transform: scale(1.15) translate(-10px, -20px); }
+}
+
+#login-page[data-ltheme="kick"] .lp-card {
+  background: #0e0e0e;
+  border: 1px solid #53FC18;
+  box-shadow:
+    0 0 0 1px rgba(83,252,24,.12),
+    0 0 40px rgba(83,252,24,.08),
+    0 32px 80px rgba(0,0,0,.9);
+}
+#login-page[data-ltheme="kick"] .lp-app-name {
+  background: linear-gradient(135deg, #53FC18, #2ECC71);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+#login-page[data-ltheme="kick"] .lp-title    { color: #53FC18; }
+#login-page[data-ltheme="kick"] .lp-link-btn { color: #53FC18; }
+#login-page[data-ltheme="kick"] .lp-input {
+  background: #1a1a1a;
+  border-color: #2a2a2a;
+  color: #e8ffe8;
+}
+#login-page[data-ltheme="kick"] .lp-input:focus {
+  border-color: #53FC18;
+  background: #1e1e1e;
+  box-shadow: 0 0 0 3px rgba(83,252,24,.15);
+}
+#login-page[data-ltheme="kick"] .lp-check-box { background: #1a1a1a; border-color: #3a3a3a; }
+#login-page[data-ltheme="kick"] .lp-divider   { background: #1e1e1e; }
+#login-page[data-ltheme="kick"] .lp-btn {
+  background: linear-gradient(135deg, #53FC18 0%, #27ae60 100%);
+  color: #050508;
+  font-weight: 800;
+  box-shadow: 0 4px 24px rgba(83,252,24,.3);
+}
+#login-page[data-ltheme="kick"] .lp-btn:hover {
+  box-shadow: 0 6px 32px rgba(83,252,24,.5);
+  opacity: .95;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   THEME 5 — ARCADE  (retro neon pixel gaming)
+════════════════════════════════════════════════════════════════ */
+#login-page[data-ltheme="arcade"] {
+  background:
+    radial-gradient(circle, rgba(255,0,255,.04) 1px, transparent 1px),
+    radial-gradient(circle, rgba(0,255,255,.03) 1px, transparent 1px),
+    #08050f;
+  background-size: 30px 30px, 60px 60px, auto;
+}
+
+#login-page[data-ltheme="arcade"] .lp-blob-1 {
+  width: 500px; height: 500px;
+  background: #FF00FF;
+  top: -180px; left: -100px;
+  opacity: .07;
+  filter: blur(90px);
+  animation: lp-arcade-b1 6s ease-in-out infinite alternate;
+}
+#login-page[data-ltheme="arcade"] .lp-blob-2 {
+  width: 450px; height: 450px;
+  background: #00FFFF;
+  bottom: -120px; right: -80px;
+  opacity: .08;
+  filter: blur(80px);
+  animation: lp-arcade-b2 9s ease-in-out infinite alternate;
+}
+@keyframes lp-arcade-b1 {
+  from { opacity: .07; transform: scale(1); }
+  to   { opacity: .12; transform: scale(1.12); }
+}
+@keyframes lp-arcade-b2 {
+  from { opacity: .08; transform: scale(1); }
+  to   { opacity: .13; transform: scale(1.08); }
+}
+
+/* Scanlines overlay */
+#login-page[data-ltheme="arcade"]::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg, transparent, transparent 2px,
+    rgba(0,0,0,.08) 2px, rgba(0,0,0,.08) 4px
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+#login-page[data-ltheme="arcade"] .lp-card {
+  position: relative;
+  z-index: 1;
+  background: rgba(8,5,15,.93);
+  border: 2px solid #FF00FF;
+  border-radius: 0;
+  box-shadow:
+    0 0 0 1px #00FFFF,
+    0 0 30px rgba(255,0,255,.25),
+    0 0 60px rgba(0,255,255,.12),
+    inset 0 0 30px rgba(255,0,255,.03);
+}
+#login-page[data-ltheme="arcade"] .lp-app-name {
+  background: linear-gradient(90deg, #FF00FF, #00FFFF, #FF00FF);
+  background-size: 200%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: lp-arcade-name 4s linear infinite;
+}
+@keyframes lp-arcade-name {
+  from { background-position: 0%; }
+  to   { background-position: 200%; }
+}
+#login-page[data-ltheme="arcade"] .lp-title {
+  color: #00FFFF;
+  text-shadow: 0 0 12px rgba(0,255,255,.5);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  font-size: 16px;
+}
+#login-page[data-ltheme="arcade"] .lp-subtitle { color: rgba(255,0,255,.7); letter-spacing: .5px; }
+#login-page[data-ltheme="arcade"] .lp-link-btn { color: #FF00FF; }
+#login-page[data-ltheme="arcade"] .lp-input {
+  background: rgba(0,0,0,.6);
+  border-color: rgba(255,0,255,.3);
+  color: #e8e8ff;
+  border-radius: 0;
+}
+#login-page[data-ltheme="arcade"] .lp-input:focus {
+  border-color: #00FFFF;
+  background: rgba(0,255,255,.04);
+  box-shadow: 0 0 0 2px rgba(0,255,255,.2), 0 0 12px rgba(0,255,255,.1);
+}
+#login-page[data-ltheme="arcade"] .lp-check-box {
+  background: rgba(0,0,0,.5);
+  border-color: rgba(255,0,255,.4);
+  border-radius: 0;
+}
+#login-page[data-ltheme="arcade"] .lp-divider {
+  background: linear-gradient(90deg, transparent, #FF00FF, #00FFFF, transparent);
+  height: 1px;
+}
+#login-page[data-ltheme="arcade"] .lp-input-wrap { border-radius: 0; }
+#login-page[data-ltheme="arcade"] .lp-btn {
+  background: linear-gradient(135deg, #FF00FF, #7700FF);
+  border-radius: 0;
+  color: #fff;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  animation: lp-arcade-btn 2s ease-in-out infinite alternate;
+}
+@keyframes lp-arcade-btn {
+  from { box-shadow: 0 0 20px rgba(255,0,255,.4); }
+  to   { box-shadow: 0 0 32px rgba(255,0,255,.7), 0 0 60px rgba(0,255,255,.15); }
+}
+#login-page[data-ltheme="arcade"] .lp-btn:hover { opacity: .9; }
+
+/* ════════════════════════════════════════════════════════════════
+   THEME 6 — GALAX  (deep space, starfield, aurora)
+════════════════════════════════════════════════════════════════ */
+#login-page[data-ltheme="galax"] {
+  background:
+    radial-gradient(ellipse at 50% 0%,   rgba(0,80,180,.35)  0%, transparent 60%),
+    radial-gradient(ellipse at 0% 100%,  rgba(80,0,180,.25)  0%, transparent 55%),
+    radial-gradient(ellipse at 100% 50%, rgba(0,160,180,.15) 0%, transparent 50%),
+    #020510;
+}
+
+/* Blob-1 repurposed as starfield */
+#login-page[data-ltheme="galax"] .lp-blob-1 {
+  width: 100%; height: 100%;
+  top: 0; left: 0;
+  border-radius: 0;
+  filter: none;
+  opacity: 1;
+  background:
+    radial-gradient(1px 1px at  8% 12%, rgba(255,255,255,.85) 0%, transparent 100%),
+    radial-gradient(1px 1px at 22% 38%, rgba(255,255,255,.6)  0%, transparent 100%),
+    radial-gradient(2px 2px at 38% 18%, rgba(200,220,255,.9)  0%, transparent 100%),
+    radial-gradient(1px 1px at 54% 63%, rgba(255,255,255,.55) 0%, transparent 100%),
+    radial-gradient(1px 1px at 69% 44%, rgba(255,255,255,.7)  0%, transparent 100%),
+    radial-gradient(2px 2px at 81% 20%, rgba(160,210,255,.85) 0%, transparent 100%),
+    radial-gradient(1px 1px at 91% 76%, rgba(255,255,255,.6)  0%, transparent 100%),
+    radial-gradient(1px 1px at 14% 82%, rgba(255,255,255,.5)  0%, transparent 100%),
+    radial-gradient(1px 1px at 33% 56%, rgba(200,230,255,.6)  0%, transparent 100%),
+    radial-gradient(2px 2px at 59% 87%, rgba(255,255,255,.7)  0%, transparent 100%),
+    radial-gradient(1px 1px at 77% 61%, rgba(255,255,255,.5)  0%, transparent 100%),
+    radial-gradient(1px 1px at 47% 41%, rgba(255,255,255,.45) 0%, transparent 100%),
+    radial-gradient(1px 1px at 93% 33%, rgba(200,220,255,.65) 0%, transparent 100%),
+    radial-gradient(2px 2px at  4% 52%, rgba(180,200,255,.7)  0%, transparent 100%),
+    radial-gradient(1px 1px at 64% 10%, rgba(255,255,255,.55) 0%, transparent 100%),
+    radial-gradient(1px 1px at 28% 72%, rgba(255,255,255,.5)  0%, transparent 100%),
+    radial-gradient(1px 1px at 75% 88%, rgba(200,230,255,.6)  0%, transparent 100%),
+    radial-gradient(2px 2px at 16% 29%, rgba(255,255,255,.65) 0%, transparent 100%);
+  animation: lp-galax-stars 80s linear infinite;
+}
+@keyframes lp-galax-stars {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-15px); }
+}
+
+/* Blob-2 repurposed as aurora strip */
+#login-page[data-ltheme="galax"] .lp-blob-2 {
+  width: 100%; height: 200px;
+  top: 0; bottom: auto; left: 0; right: 0;
+  border-radius: 0;
+  background: linear-gradient(90deg,
+    rgba(0,200,255,.1)   0%,
+    rgba(100,50,255,.18) 30%,
+    rgba(0,200,180,.12)  60%,
+    rgba(80,0,200,.1)    100%
+  );
+  filter: blur(30px);
+  opacity: 1;
+  animation: lp-galax-aurora 10s ease-in-out infinite alternate;
+}
+@keyframes lp-galax-aurora {
+  from { opacity: .8; transform: scaleX(1)   translateY(0); }
+  to   { opacity: 1;  transform: scaleX(1.1) translateY(8px); }
+}
+
+#login-page[data-ltheme="galax"] .lp-card {
+  background: rgba(2,5,16,.83);
+  border: 1px solid rgba(0,180,255,.2);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  box-shadow:
+    0 0 0 1px rgba(0,100,200,.15),
+    0 0 60px rgba(0,100,255,.08),
+    0 40px 100px rgba(0,0,0,.9),
+    inset 0 1px 0 rgba(255,255,255,.06);
+}
+#login-page[data-ltheme="galax"] .lp-app-name {
+  background: linear-gradient(135deg, #00C8FF 0%, #7B7FFF 50%, #00FFD1 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+#login-page[data-ltheme="galax"] .lp-title    { color: #a0d4ff; }
+#login-page[data-ltheme="galax"] .lp-subtitle { color: rgba(150,200,255,.65); }
+#login-page[data-ltheme="galax"] .lp-link-btn { color: #00C8FF; }
+#login-page[data-ltheme="galax"] .lp-input {
+  background: rgba(0,20,60,.5);
+  border-color: rgba(0,120,200,.25);
+  color: #cce8ff;
+}
+#login-page[data-ltheme="galax"] .lp-input:focus {
+  border-color: rgba(0,200,255,.6);
+  background: rgba(0,30,80,.6);
+  box-shadow: 0 0 0 3px rgba(0,200,255,.12), 0 0 20px rgba(0,150,255,.08);
+}
+#login-page[data-ltheme="galax"] .lp-check-box { background: rgba(0,20,60,.5); border-color: rgba(0,120,200,.3); }
+#login-page[data-ltheme="galax"] .lp-divider   { background: rgba(0,150,255,.15); }
+#login-page[data-ltheme="galax"] .lp-btn {
+  background: linear-gradient(135deg, #0050C8 0%, #5020C0 50%, #0090C8 100%);
+  box-shadow: 0 6px 30px rgba(0,100,255,.4);
+  animation: lp-galax-btn 3s ease-in-out infinite alternate;
+}
+@keyframes lp-galax-btn {
+  from { box-shadow: 0 6px 30px rgba(0,100,255,.4); }
+  to   { box-shadow: 0 8px 40px rgba(0,150,255,.6), 0 0 80px rgba(80,0,255,.08); }
+}
+#login-page[data-ltheme="galax"] .lp-btn:hover { opacity: .92; }
+
+/* ════════════════════════════════════════════════════════════════
    SETTINGS — Login theme picker preview cards
 ════════════════════════════════════════════════════════════════ */
 .ltheme-grid {
@@ -363,7 +659,87 @@
 .ltp-card-glass {
   background: rgba(255,255,255,.07);
   border: 1px solid rgba(255,255,255,.14);
+  -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
+}
+
+/* Kick preview */
+.ltheme-preview--kick { background: #050508; }
+.ltheme-preview--kick .ltp-blob-a {
+  width: 70px; height: 70px;
+  background: #53FC18;
+  top: -20px; left: -20px;
+  filter: blur(20px);
+  opacity: .2;
+}
+.ltheme-preview--kick .ltp-blob-b {
+  width: 60px; height: 60px;
+  background: #27ae60;
+  bottom: -15px; right: -15px;
+  filter: blur(18px);
+  opacity: .15;
+}
+.ltp-card-kick {
+  border: 1px solid #53FC18;
+  background: #0e0e0e;
+  box-shadow: 0 0 10px rgba(83,252,24,.25);
+}
+
+/* Arcade preview */
+.ltheme-preview--arcade {
+  background:
+    radial-gradient(circle, rgba(255,0,255,.15) 1px, transparent 1px),
+    radial-gradient(circle, rgba(0,255,255,.1)  1px, transparent 1px),
+    #08050f;
+  background-size: 10px 10px, 20px 20px, auto;
+}
+.ltheme-preview--arcade .ltp-blob-a {
+  width: 55px; height: 55px;
+  background: #FF00FF;
+  top: -15px; left: -15px;
+  filter: blur(14px);
+  opacity: .38;
+}
+.ltheme-preview--arcade .ltp-blob-b {
+  width: 50px; height: 50px;
+  background: #00FFFF;
+  bottom: -12px; right: -12px;
+  filter: blur(12px);
+  opacity: .32;
+}
+.ltp-card-arcade {
+  border: 2px solid #FF00FF;
+  border-radius: 0;
+  background: rgba(8,5,15,.9);
+  box-shadow: 0 0 8px rgba(255,0,255,.45), 0 0 0 1px #00FFFF;
+}
+
+/* Galax preview */
+.ltheme-preview--galax {
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(0,80,180,.55) 0%, transparent 70%),
+    #020510;
+}
+.ltheme-preview--galax .ltp-blob-a {
+  width: 65px; height: 65px;
+  background: #0050C8;
+  top: -20px; left: -20px;
+  filter: blur(16px);
+  opacity: .55;
+}
+.ltheme-preview--galax .ltp-blob-b {
+  width: 55px; height: 55px;
+  background: #5020C0;
+  bottom: -15px; right: -15px;
+  filter: blur(14px);
+  opacity: .48;
+}
+.ltp-card-galax {
+  border: 1px solid rgba(0,200,255,.32);
+  background: rgba(2,5,16,.85);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 0 12px rgba(0,100,255,.22);
 }
 
 .ltheme-label {

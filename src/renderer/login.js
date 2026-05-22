@@ -3,8 +3,14 @@
 
   var loginPg = document.getElementById('login-page');
 
-  // Apply saved login theme immediately (before anything is shown)
-  loginPg.setAttribute('data-ltheme', localStorage.getItem('login_theme') || 'nebula');
+  // Apply login theme from DB — data-ltheme="nebula" is the HTML default;
+  // update as soon as the local API responds (always fast, same process).
+  getPort().then(function (port) {
+    return fetch('http://127.0.0.1:' + port + '/api/settings');
+  }).then(function (res) { return res.json(); })
+    .then(function (s) {
+      if (s && s.login_theme) loginPg.setAttribute('data-ltheme', s.login_theme);
+    }).catch(function () { /* keep HTML default 'nebula' */ });
 
   // ── SVG helpers ──────────────────────────────────────────────────────────
   var SVG_EYE_OPEN = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';
