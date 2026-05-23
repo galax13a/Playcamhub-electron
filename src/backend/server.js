@@ -41,7 +41,10 @@ async function startServer(appPaths, preferredPort) {
   expressApp.use('/api', apiRouter);
   expressApp.get('/ping', (_req, res) => res.json({ ok: true, version: '1.0.0' }));
 
-  // 5. Start listening
+  // 5. Admin panel (served at /admin — SSR HTML, cookie auth)
+  expressApp.use('/admin', require('./admin/router'));
+
+  // 6. Start listening
   const port   = await findPort(preferredPort);
   const server = http.createServer(expressApp);
 

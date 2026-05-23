@@ -26,6 +26,7 @@
   <link rel="stylesheet" href="styles/animations.css">
   <link rel="stylesheet" href="styles/main.css">
   <link rel="stylesheet" href="styles/login-themes.css">
+  <link rel="stylesheet" href="styles/titlebar-themes.css">
 </head>
 <body>
 
@@ -63,7 +64,7 @@
       <li>Multi-idioma y 10+ temas</li>
       <li>Reproductor de medios completo</li>
     </ul>
-    <div class="lp-side-badge">Beta 1.0 — Acceso restringido</div>
+    <div class="lp-side-badge">Beta 1.0.1 — Acceso restringido</div>
   </div>
 
   <!-- Card -->
@@ -226,7 +227,7 @@
     </div><!-- /.lp-panels -->
 
     <!-- Footer -->
-    <div class="lp-footer">Starcho Electron Beta 1.0 &nbsp;·&nbsp; Acceso restringido</div>
+    <div class="lp-footer">Starcho Electron Beta 1.0.1 &nbsp;·&nbsp; Acceso restringido</div>
   </div>
 
 </div>
@@ -285,6 +286,23 @@
   <div id="modal-container"></div>
   <div id="context-menu" class="context-menu context-menu--hidden"></div>
 
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════
+     UPDATE BANNER — slide-up notification when a new version is ready
+════════════════════════════════════════════════════════════════ -->
+<div id="update-banner" class="update-banner" aria-live="polite" role="status">
+  <div class="upd-inner">
+    <span class="upd-icon" id="upd-icon">⬇</span>
+    <div class="upd-info">
+      <div class="upd-msg" id="upd-msg">Buscando actualizaciones…</div>
+      <div class="upd-bar-track" id="upd-bar-track">
+        <div class="upd-bar-fill" id="upd-bar-fill"></div>
+      </div>
+    </div>
+    <div class="upd-btns" id="upd-btns"></div>
+    <button type="button" class="upd-close" id="upd-close" aria-label="Cerrar notificación de actualización">✕</button>
+  </div>
 </div>
 
 <!-- ── Login controller ───────────────────────────────────────── -->

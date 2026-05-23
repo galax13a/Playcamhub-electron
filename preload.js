@@ -27,9 +27,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.send('app:notification', { title, body }),
 
   // Updater events (main → renderer)
-  onUpdateAvailable: (cb) => ipcRenderer.on('updater:update-available', (_, info) => cb(info)),
-  onUpdateDownloaded: (cb) => ipcRenderer.on('updater:update-downloaded', (_, info) => cb(info)),
-  installUpdate: () => ipcRenderer.send('updater:install'),
+  onCheckingForUpdate:    (cb) => ipcRenderer.on('updater:checking',              ()       => cb()),
+  onUpdateAvailable:      (cb) => ipcRenderer.on('updater:update-available',      (_, i)   => cb(i)),
+  onUpdateNotAvailable:   (cb) => ipcRenderer.on('updater:update-not-available',  (_, i)   => cb(i)),
+  onUpdateProgress:       (cb) => ipcRenderer.on('updater:download-progress',     (_, p)   => cb(p)),
+  onUpdateDownloaded:     (cb) => ipcRenderer.on('updater:update-downloaded',     (_, i)   => cb(i)),
+  onUpdaterError:         (cb) => ipcRenderer.on('updater:error',                 (_, msg) => cb(msg)),
+  installUpdate:          ()   => ipcRenderer.send('updater:install'),
+  checkForUpdates:        ()   => ipcRenderer.send('updater:check'),
 
   // Open external links
   openExternal: (url) => ipcRenderer.send('app:open-external', url),

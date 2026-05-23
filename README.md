@@ -633,6 +633,127 @@ src/renderer/
 
 ---
 
+## Panel de Administración Web (`/admin`)
+
+El starkit incluye un panel de administración server-side renderizado accesible en `http://127.0.0.1:{PORT}/admin`.
+
+### Acceso
+
+| Campo | Valor |
+|-------|-------|
+| Email | `root@starcho.com` |
+| Contraseña | `123456x` |
+
+Las credenciales se definen en `src/backend/admin/sessions.js`. Son independientes de la tabla de usuarios de la app.
+
+### Secciones
+
+| Ruta | Descripción |
+|------|-------------|
+| `/admin/dashboard` | Vista general: conteo de plugins/usuarios/ajustes, env vars, accesos rápidos |
+| `/admin/menu` | Activar / desactivar plugins con toggle (requiere reinicio) |
+| `/admin/config` | Ajustes rápidos con `<select>`, editor de `.env`, CRUD completo de todos los ajustes en DB |
+| `/admin/users` | Lista paginada (10/página), búsqueda, editar usuario, eliminar, crear, resetear contraseña |
+
+### Seguridad del panel
+
+- **Rate limiting** — 5 intentos fallidos por IP → bloqueo de 15 minutos.
+- **CSRF protection** — token de 16 bytes embebido en cada sesión; se inyecta automáticamente en todos los formularios POST vía JS; validación en el servidor con `crypto.timingSafeEqual`.
+- **Sesiones HttpOnly** — cookie `starcho_admin` con `HttpOnly; SameSite=Lax; Max-Age=86400`.
+- **Feedback de intentos** — el formulario de login indica cuántos intentos quedan antes del bloqueo.
+
+### Configuración de ajustes rápidos
+
+Desde `/admin/config` se pueden cambiar con `<select>`:
+
+| Clave | Opciones |
+|-------|---------|
+| `theme` | 12 temas de UI con preview de colores en tiempo real |
+| `language` | es / en / pt |
+| `volume` | Slider 0–100 con indicador de % |
+| `repeat` | none / all / one / library |
+| `shuffle` | true / false |
+| `titlebar_theme` | default / mac / linux / cartoon |
+
+---
+
+## Temas de Barra de Título (`titlebar_theme`)
+
+El starkit incluye 4 estilos para los controles de ventana (min/max/close). Se configuran con el atributo `data-titlebar` en `#title-bar`.
+
+| Tema | Descripción |
+|------|-------------|
+| `default` | Windows-style: controles a la derecha, circles rojos/amarillos/verdes |
+| `mac` | Controles a la **izquierda** en orden Close→Min→Max, efecto frosted glass con `backdrop-filter` |
+| `linux` | Botones **cuadrados** planos (GNOME/KDE palette), iconos siempre visibles, hover colorido |
+| `cartoon` | Botones grandes con animación de bounce, rebote y glow en hover; título con animación `hue-rotate` arco iris |
+
+El tema se lee de la clave `titlebar_theme` en la tabla `settings` durante el arranque:
+
+```js
+// app.js — applyTitlebarTheme()
+const bar = document.getElementById('title-bar');
+bar.dataset.titlebar = settings.titlebar_theme ?? 'default';
+```
+
+Para cambiar el tema: `/admin/config` → Ajustes rápidos → "Tema de la barra de título" → Guardar → Reiniciar app.
+
+---
+
+## Auto-actualización
+
+El sistema de actualizaciones usa **electron-updater** apuntando a GitHub Releases. Solo activo en builds de producción.
+
+### Canales IPC del updater
+
+| Canal (main → renderer) | Payload | Cuándo |
+|--------------------------|---------|--------|
+| `updater:checking` | — | Inicia verificación |
+| `updater:update-available` | `{ version, releaseDate, releaseNotes }` | Nueva versión encontrada |
+| `updater:update-not-available` | `{ version }` | App ya está actualizada |
+| `updater:download-progress` | `{ percent, transferred, total, bytesPerSecond }` | Cada ~500 ms durante descarga |
+| `updater:update-downloaded` | `{ version, releaseDate }` | Instalador listo |
+| `updater:error` | `string` (mensaje) | Error en cualquier fase |
+
+| Canal (renderer → main) | Descripción |
+|--------------------------|-------------|
+| `updater:install` | Llama `quitAndInstall()` (instala y reinicia) |
+| `updater:check` | Verifica actualizaciones manualmente |
+
+### Banner de actualización
+
+Cuando hay una actualización disponible, aparece un banner animado en la parte inferior de la app con:
+
+- **Descargando** → barra de progreso con porcentaje y bytes transferidos, icono giratorio.
+- **Lista para instalar** → botones "Instalar y reiniciar" / "Más tarde" + notificación del SO.
+
+El banner se implementa en `src/renderer/styles/titlebar-themes.css` (clases `.update-banner`, `.upd-inner`, etc.) y se controla desde `wireUpdaterEvents()` en `app.js`.
+
+### Publicar una actualización
+
+1. Incrementa `version` en `package.json` (ej: `1.0.2`).
+2. Crea un GitHub Release con el tag `v1.0.2`.
+3. Sube los binarios generados por `electron-builder` al release.
+4. Las apps en producción detectarán la nueva versión al arrancar o cada 4 h.
+
+---
+
+## Changelog
+
+### v1.0.1-beta.1
+
+- **Auto-updater mejorado** — eventos `download-progress`, `checking-for-update`, `update-not-available` y `updater:error`; banner de UI con barra de progreso y botones de instalación.
+- **Temas de titlebar** — estilos `mac`, `linux` y `cartoon` via CSS `[data-titlebar]`; cambiables desde el panel admin.
+- **Panel de administración** — `/admin` con login protegido, dashboard, gestión de plugins, configuración completa y gestión de usuarios con paginación/búsqueda/CRUD.
+- **Seguridad admin** — rate limiting de login (5 intentos → 15 min lockout), tokens CSRF por sesión, validación timing-safe.
+- **`titlebar_theme`** en la tabla `settings` — persiste el estilo de la barra de título entre reinicios.
+
+### v1.0.0
+
+- Lanzamiento inicial del starkit con plugins, temas, i18n, mini-player y auto-updater básico.
+
+---
+
 ## Licencia
 
 MIT — úsalo, modifícalo y compártelo libremente.

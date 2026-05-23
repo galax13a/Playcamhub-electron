@@ -78,16 +78,19 @@ async function boot() {
   // 8. Init router — renders initial view after sidebar is ready
   initRouter();
 
-  // 9. Platform integrations
+  // 9. Apply titlebar theme from DB settings (must run before first paint)
+  applyTitlebarTheme(store.state.settings?.titlebar_theme);
+
+  // 10. Platform integrations
   if (window.electronAPI) {
     wireMacOSMenu();
     wireUpdaterEvents();
   }
 
-  // 10. Global keyboard shortcuts
+  // 11. Global keyboard shortcuts
   wireKeyboard();
 
-  console.log('StarchoElectron v1.0.0 ready 🚀');
+  console.log('StarchoElectron v1.0.1-beta.1 ready 🚀');
 }
 
 function wireWindowControls() {
@@ -140,9 +143,118 @@ function wireMacOSMenu() {
   });
 }
 
+// ── Titlebar theme ────────────────────────────────────────────────────────────
+
+/**
+ * Reads titlebar_theme from DB settings and applies the data-titlebar attribute.
+ * Valid values: 'default' | 'mac' | 'linux' | 'cartoon'
+ */
+function applyTitlebarTheme(theme) {
+  const bar = document.getElementById('title-bar');
+  if (!bar) return;
+  const valid = ['mac', 'linux', 'cartoon'];
+  bar.dataset.titlebar = valid.includes(theme) ? theme : 'default';
+}
+
+// ── Auto-updater UI ───────────────────────────────────────────────────────────
+
+/**
+ * Wires all updater IPC events to the #update-banner element.
+ *
+ * Banner states:
+ *  - update-available  → slide in, show progress bar, spin icon
+ *  - download-progress → update bar width and message
+ *  - update-downloaded → swap to "install" state with action buttons
+ *  - error             → show a brief toast (banner stays hidden)
+ */
 function wireUpdaterEvents() {
-  window.electronAPI?.onUpdateDownloaded?.((info) => {
-    showToast(`Update v${info.version} ready — restart to install`, 'info');
+  const api = window.electronAPI;
+  if (!api) return;
+
+  // DOM references
+  const banner  = document.getElementById('update-banner');
+  const iconEl  = document.getElementById('upd-icon');
+  const msgEl   = document.getElementById('upd-msg');
+  const barTrack= document.getElementById('upd-bar-track');
+  const barFill = document.getElementById('upd-bar-fill');
+  const btnsEl  = document.getElementById('upd-btns');
+  const closeBtn= document.getElementById('upd-close');
+
+  if (!banner) return;
+
+  /** Slide the banner up into view. */
+  function showBanner() { banner.classList.add('upd-visible'); }
+
+  /** Slide the banner back down and hide. */
+  function hideBanner() { banner.classList.remove('upd-visible'); }
+
+  /** Switch icon to a static emoji (stops spinner). */
+  function setIcon(emoji) {
+    iconEl.textContent = emoji;
+    iconEl.classList.add('upd-done');
+  }
+
+  /** Show the progress bar track. */
+  function showBar() { barTrack.classList.add('upd-bar-visible'); }
+
+  /** Hide the progress bar track. */
+  function hideBar() { barTrack.classList.remove('upd-bar-visible'); }
+
+  closeBtn?.addEventListener('click', hideBanner);
+
+  // ── New version found — download starting in background ──────────────────
+  api.onUpdateAvailable?.((info) => {
+    iconEl.textContent = '⬇';
+    iconEl.classList.remove('upd-done');
+    msgEl.textContent  = `Nueva versión disponible: v${info.version} — descargando en segundo plano…`;
+    barFill.style.width = '0%';
+    btnsEl.innerHTML   = '';
+    showBar();
+    showBanner();
+  });
+
+  // ── Download progress — update the bar width ──────────────────────────────
+  api.onUpdateProgress?.((prog) => {
+    const pct = Math.round(prog.percent ?? 0);
+    const mb  = prog.transferred ? ` (${(prog.transferred / 1048576).toFixed(1)} MB)` : '';
+    msgEl.textContent  = `Descargando actualización… ${pct}%${mb}`;
+    barFill.style.width = `${pct}%`;
+  });
+
+  // ── Download complete — prompt the user to install ────────────────────────
+  api.onUpdateDownloaded?.((info) => {
+    setIcon('✅');
+    msgEl.textContent = `Actualización v${info.version} lista. Reinicia para aplicar los cambios.`;
+    hideBar();
+
+    // Build action buttons (created as DOM nodes to avoid innerHTML script injection)
+    btnsEl.innerHTML = '';
+
+    const installBtn = document.createElement('button');
+    installBtn.type      = 'button';
+    installBtn.className = 'upd-btn-install';
+    installBtn.textContent = 'Instalar y reiniciar';
+    installBtn.addEventListener('click', () => api.installUpdate());
+
+    const laterBtn = document.createElement('button');
+    laterBtn.type      = 'button';
+    laterBtn.className = 'upd-btn-later';
+    laterBtn.textContent = 'Más tarde';
+    laterBtn.addEventListener('click', hideBanner);
+
+    btnsEl.append(installBtn, laterBtn);
+    showBanner();
+
+    // Also fire an OS-level notification so the user notices even if the window is minimized
+    api.showNotification?.(
+      'StarchoElectron',
+      `Actualización v${info.version} lista — abre la app para instalar`,
+    );
+  });
+
+  // ── Updater error — show toast, keep banner hidden ────────────────────────
+  api.onUpdaterError?.((msg) => {
+    showToast(`Error de actualización: ${msg}`, 'error');
   });
 }
 

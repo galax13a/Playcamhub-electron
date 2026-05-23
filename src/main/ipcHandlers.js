@@ -3,6 +3,7 @@
 const { ipcMain, app, shell, Notification } = require('electron');
 const { getMainWindow, createMiniPlayerWindow, getMiniPlayerWindow } = require('./windowManager');
 const { IS_DEV } = require('./env');
+const log = require('electron-log');
 const fs   = require('fs');
 const path = require('path');
 
@@ -112,9 +113,20 @@ function registerIpcHandlers(appPaths, serverPort) {
   });
 
   // ── Updater ───────────────────────────────────────────────────────────────
+  // Install the already-downloaded update and restart
   ipcMain.on('updater:install', () => {
     const { autoUpdater } = require('electron-updater');
     autoUpdater.quitAndInstall();
+  });
+
+  // Manual update check triggered from the renderer (e.g. Settings page)
+  ipcMain.on('updater:check', () => {
+    if (!IS_DEV) {
+      const { autoUpdater } = require('electron-updater');
+      autoUpdater.checkForUpdatesAndNotify().catch((err) => {
+        log.error('[updater] Manual check failed:', err.message);
+      });
+    }
   });
 
   // ── Mini player ───────────────────────────────────────────────────────────

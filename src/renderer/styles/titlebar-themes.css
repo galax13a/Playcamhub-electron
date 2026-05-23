@@ -1,0 +1,326 @@
+/*
+ * titlebar-themes.css — Alternate window chrome styles for the custom title bar.
+ *
+ * Three themes are available. Apply by setting the data-titlebar attribute on
+ * #title-bar (e.g. <div id="title-bar" data-titlebar="mac">).
+ *
+ *   mac     — Controls on the LEFT in Close | Minimize | Maximize order,
+ *             semi-transparent frosted glass background.
+ *   linux   — Sharp flat buttons on the right, GNOME/KDE inspired.
+ *   cartoon — Giant colorful buttons with bounce animations, game-style fun.
+ *
+ * The default style (no data-titlebar or data-titlebar="default") is defined
+ * in main.css and keeps the current Windows-style layout.
+ */
+
+/* ══════════════════════════════════════════════════════════════
+   MAC THEME — controls on left, frosted glass bar
+══════════════════════════════════════════════════════════════ */
+
+[data-titlebar="mac"] {
+  /* Frosted glass effect — vendor prefix must come first */
+  background: rgba(18, 18, 20, 0.82);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  backdrop-filter: blur(24px) saturate(160%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+/* Move the controls group to the far left */
+[data-titlebar="mac"] .window-controls {
+  order: -1;       /* comes before .tb-logo in flex layout */
+  gap: 8px;
+  margin-right: 8px;
+}
+
+/* macOS canonical order: Close | Minimize | Maximize */
+[data-titlebar="mac"] .wc-btn.close    { order: 1; }
+[data-titlebar="mac"] .wc-btn.minimize { order: 2; }
+[data-titlebar="mac"] .wc-btn.maximize { order: 3; }
+
+/* Slightly larger buttons + stronger glow on hover */
+[data-titlebar="mac"] .wc-btn {
+  width: 12px;
+  height: 12px;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+[data-titlebar="mac"] .wc-btn:hover {
+  filter: none;
+  transform: scale(1.15);
+}
+[data-titlebar="mac"] .wc-btn.close:hover    { box-shadow: 0 0 8px 2px rgba(255, 95, 87, 0.7); }
+[data-titlebar="mac"] .wc-btn.minimize:hover { box-shadow: 0 0 8px 2px rgba(254, 188, 46, 0.7); }
+[data-titlebar="mac"] .wc-btn.maximize:hover { box-shadow: 0 0 8px 2px rgba(40, 200, 64, 0.7); }
+
+/* ══════════════════════════════════════════════════════════════
+   LINUX THEME — flat square buttons, GNOME/KDE look
+══════════════════════════════════════════════════════════════ */
+
+[data-titlebar="linux"] {
+  background: #1e1e2e;
+  border-bottom: 1px solid #313244;
+}
+
+/* Square buttons */
+[data-titlebar="linux"] .window-controls {
+  gap: 4px;
+}
+
+[data-titlebar="linux"] .wc-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;       /* square — not circular */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.1s, opacity 0.1s;
+}
+
+/* Neutral flat colors (Ubuntu Yaru / GNOME Adwaita palette) */
+[data-titlebar="linux"] .wc-btn.close    { background: #45475a; }
+[data-titlebar="linux"] .wc-btn.minimize { background: #45475a; }
+[data-titlebar="linux"] .wc-btn.maximize { background: #45475a; }
+
+[data-titlebar="linux"] .wc-btn.close:hover    { background: #f38ba8; filter: none; }
+[data-titlebar="linux"] .wc-btn.minimize:hover { background: #f9e2af; filter: none; }
+[data-titlebar="linux"] .wc-btn.maximize:hover { background: #a6e3a1; filter: none; }
+
+/* Override the circular ::before symbols with text characters — always visible */
+[data-titlebar="linux"] .wc-btn::before {
+  opacity: 1;
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.65);
+  line-height: 28px;
+}
+[data-titlebar="linux"] .wc-btn.close::before    { content: '✕'; }
+[data-titlebar="linux"] .wc-btn.minimize::before { content: '−'; }
+[data-titlebar="linux"] .wc-btn.maximize::before { content: '□'; }
+
+[data-titlebar="linux"] .wc-btn:hover::before {
+  color: rgba(0,0,0,0.7);
+}
+
+/* Slightly tinted title bar text for contrast */
+[data-titlebar="linux"] .tb-title {
+  color: #cdd6f4;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   CARTOON / GAME THEME — big bouncy colorful buttons, fun!
+══════════════════════════════════════════════════════════════ */
+
+[data-titlebar="cartoon"] {
+  /* Rainbow gradient background */
+  background: linear-gradient(90deg, #1a0533 0%, #0d1f45 50%, #011f12 100%);
+  border-bottom: 2px solid #ff00cc;
+  box-shadow: 0 2px 12px rgba(255, 0, 204, 0.25);
+  padding: 0 16px;
+}
+
+/* Giant, thick-bordered, wobbly buttons */
+[data-titlebar="cartoon"] .window-controls {
+  gap: 10px;
+}
+
+[data-titlebar="cartoon"] .wc-btn {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2.5px solid rgba(255,255,255,0.25);
+  box-shadow: 0 3px 0 rgba(0,0,0,0.4), 0 0 10px rgba(255,255,255,0.15);
+  transition: transform 0.12s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.12s ease,
+              filter 0.12s ease;
+}
+
+/* Brighter, more saturated traffic-light colors */
+[data-titlebar="cartoon"] .wc-btn.close    { background: #ff4757; border-color: #ff6b81; }
+[data-titlebar="cartoon"] .wc-btn.minimize { background: #ffd32a; border-color: #ffe066; }
+[data-titlebar="cartoon"] .wc-btn.maximize { background: #2ed573; border-color: #7bed9f; }
+
+/* Bounce animation on hover */
+[data-titlebar="cartoon"] .wc-btn:hover {
+  transform: scale(1.35) rotate(-5deg);
+  filter: brightness(1.2) saturate(1.4);
+  box-shadow: 0 5px 0 rgba(0,0,0,0.4),
+              0 0 20px rgba(255,255,255,0.4),
+              0 0 8px currentColor;
+}
+[data-titlebar="cartoon"] .wc-btn:active {
+  transform: scale(0.9) rotate(5deg);
+}
+
+/* Emoji icons always visible (cartoon style) */
+[data-titlebar="cartoon"] .wc-btn::before {
+  opacity: 1;
+  font-size: 9px;
+  line-height: 20px;
+  font-weight: 900;
+  color: rgba(0,0,0,0.5);
+}
+[data-titlebar="cartoon"] .wc-btn.close::before    { content: '✕'; }
+[data-titlebar="cartoon"] .wc-btn.minimize::before { content: '−'; }
+[data-titlebar="cartoon"] .wc-btn.maximize::before { content: '⛶'; }
+
+/* Cartoon-style app title — rainbow cycle via hue-rotate (GPU-composited, no Paint cost) */
+[data-titlebar="cartoon"] .tb-title {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: #ff00cc;
+  -webkit-text-fill-color: #ff00cc;
+  will-change: filter;
+  animation: cartoon-hue 3s linear infinite;
+}
+
+@keyframes cartoon-hue {
+  from { filter: hue-rotate(0deg); }
+  to   { filter: hue-rotate(360deg); }
+}
+
+/* Logo text also gets the cartoon treatment */
+[data-titlebar="cartoon"] .tb-logo {
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   UPDATE BANNER — floating notification at the bottom of the app
+   (independent of titlebar theme — always the same style)
+══════════════════════════════════════════════════════════════ */
+
+.update-banner {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 9990;
+  background: linear-gradient(90deg, rgba(15,15,25,0.97) 0%, rgba(25,10,40,0.97) 100%);
+  border-top: 1px solid rgba(139,92,246,0.5);
+  box-shadow: 0 -4px 24px rgba(139,92,246,0.15);
+  padding: 10px 20px;
+  transform: translateY(100%);
+  opacity: 0;
+  transition: transform 0.35s cubic-bezier(0.22,1,0.36,1), opacity 0.35s ease;
+  pointer-events: none;
+}
+
+.update-banner.upd-visible {
+  transform: translateY(0);
+  opacity: 1;
+  pointer-events: all;
+}
+
+.upd-inner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.upd-icon {
+  font-size: 22px;
+  flex-shrink: 0;
+  will-change: transform;            /* promote to compositor layer — avoids Paint on each frame */
+  animation: upd-spin 1.2s linear infinite;
+}
+.upd-icon.upd-done {
+  animation: none;
+  will-change: auto;                 /* release the compositor layer once done */
+}
+
+@keyframes upd-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.upd-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.upd-msg {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e2d9f3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Progress bar track — hidden by default, shown during download */
+.upd-bar-track {
+  display: none;
+  height: 4px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 4px;
+  margin-top: 6px;
+  overflow: hidden;
+}
+
+.upd-bar-track.upd-bar-visible {
+  display: block;
+}
+
+.upd-bar-fill {
+  height: 100%;
+  width: 0%;                       /* starts at 0, JS drives it via style.width */
+  background: linear-gradient(90deg, #9c3fe8, #4facfe);
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+
+.upd-btns {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.upd-btn-install {
+  padding: 7px 16px;
+  background: linear-gradient(135deg, #9c3fe8, #4facfe);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 0.15s;
+  white-space: nowrap;
+}
+.upd-btn-install:hover { filter: brightness(1.15); }
+
+.upd-btn-later {
+  padding: 7px 14px;
+  background: rgba(255,255,255,0.08);
+  color: rgba(255,255,255,0.55);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+.upd-btn-later:hover { background: rgba(255,255,255,0.14); color: #fff; }
+
+/* Dismiss × button */
+.upd-close {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.07);
+  border: 1px solid rgba(255,255,255,0.12);
+  color: rgba(255,255,255,0.4);
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.12s, color 0.12s;
+}
+.upd-close:hover { background: rgba(255,255,255,0.14); color: #fff; }
