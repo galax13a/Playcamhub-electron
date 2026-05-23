@@ -33,7 +33,7 @@ function registerIpcHandlers(appPaths, serverPort) {
   });
 
   // ── System performance stats ──────────────────────────────────────────────
-  // Returns { cpu, memory } sampled over a 300 ms window.
+  // Returns { cpu, memory, disk } sampled over a 300 ms window.
   ipcMain.handle('system:stats', async () => {
     const os = require('os');
 
@@ -58,9 +58,23 @@ function registerIpcHandlers(appPaths, serverPort) {
     const usedMem    = totalMem - freeMem;
     const memPercent = Math.round((usedMem / totalMem) * 100);
 
+    // Disk space via fs.statfs (Node 18.15+)
+    let disk = null;
+    try {
+      const diskPath = process.platform === 'win32'
+        ? (process.env.SYSTEMDRIVE || 'C:') + '\\'
+        : '/';
+      const stat = await fs.promises.statfs(diskPath);
+      const diskTotal = stat.bsize * stat.blocks;
+      const diskFree  = stat.bsize * stat.bavail;
+      const diskUsed  = diskTotal - diskFree;
+      disk = { total: diskTotal, used: diskUsed, free: diskFree, percent: Math.round((diskUsed / diskTotal) * 100) };
+    } catch (_) {}
+
     return {
       cpu:    cpuPercent,
       memory: { total: totalMem, used: usedMem, percent: memPercent },
+      disk,
     };
   });
 

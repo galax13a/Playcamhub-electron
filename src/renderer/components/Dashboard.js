@@ -76,7 +76,10 @@ export async function renderDashboard(el) {
           </div>
         </div>
         <div class="dash-topbar-right">
-          <span class="dash-topbar-date">${dateStr()}</span>
+          <div class="dash-topbar-clock" id="dash-clock">
+            <div class="dash-topbar-time" id="dash-time"></div>
+            <div class="dash-topbar-date" id="dash-date">${dateStr()}</div>
+          </div>
           <button class="dash-hdr-btn" id="dh-profile-btn" title="Editar perfil">👤</button>
           <button class="dash-hdr-btn dash-hdr-btn--primary" id="dh-settings-btn" title="Configuración">⚙️</button>
         </div>
@@ -149,7 +152,7 @@ export async function renderDashboard(el) {
       <!-- ── 7. Footer ─────────────────────────────────────────────── -->
       <div class="dash-footer">
         <span>${esc(cfg.appName || 'Starcho Electron')} v${esc(cfg.appVersion || '1.0.0')}</span>
-        <span style="color:var(--text-muted)">${dateStr()}</span>
+        <span style="color:var(--text-muted)" id="dash-footer-date">${dateStr()}</span>
       </div>
 
     </div>`;
@@ -165,6 +168,10 @@ export async function renderDashboard(el) {
   el.querySelectorAll('.dash-quick-btn[data-view]').forEach(btn =>
     btn.addEventListener('click', () => store.navigate(btn.dataset.view)));
 
+  // ── Live clock (updates every second while dashboard is visible) ──────────
+
+  _startClock(el);
+
   // ── Async: system stats (live refresh every 3 s while dashboard is visible)─
 
   _startPerfMonitor(el);
@@ -173,6 +180,28 @@ export async function renderDashboard(el) {
 
   await PluginRegistry.renderDashboardZone('header',  el.querySelector('#dash-zone-header'));
   await PluginRegistry.renderDashboardZone('content', el.querySelector('#dash-zone-content'));
+}
+
+// ── Live clock ─────────────────────────────────────────────────────────────────
+
+/** Updates the clock every second. Stops when the dashboard unmounts. */
+function _startClock(rootEl) {
+  function tick() {
+    const timeEl = rootEl.querySelector('#dash-time');
+    if (!timeEl || !rootEl.isConnected) { clearInterval(timer); return; }
+    const now = new Date();
+    timeEl.textContent = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const dateEl = rootEl.querySelector('#dash-date');
+    if (dateEl) dateEl.textContent = dateStr();
+    const footerDateEl = rootEl.querySelector('#dash-footer-date');
+    if (footerDateEl) footerDateEl.textContent = dateStr();
+  }
+  tick();
+  const timer = setInterval(tick, 1000);
+  const obs = new MutationObserver(() => {
+    if (!rootEl.isConnected) { clearInterval(timer); obs.disconnect(); }
+  });
+  obs.observe(document.body, { childList: true, subtree: true });
 }
 
 // ── System performance monitor ─────────────────────────────────────────────────
@@ -193,11 +222,14 @@ function _startPerfMonitor(rootEl) {
 
       const ramGb    = (s.memory.used  / 1024 ** 3).toFixed(1);
       const ramTotal = (s.memory.total / 1024 ** 3).toFixed(1);
+      const diskText = s.disk
+        ? `${fmtBytes(s.disk.used)} / ${fmtBytes(s.disk.total)}`
+        : 'Sin datos';
 
       perfEl.innerHTML = `
-        ${_perfCard('🖥️ CPU',    s.cpu,             `${s.cpu}%`,             _cpuColor(s.cpu))}
-        ${_perfCard('🧠 RAM',    s.memory.percent,  `${ramGb} / ${ramTotal} GB`, _memColor(s.memory.percent))}
-        ${_perfCard('💾 Disco',  null,               'Biblioteca en DB',        'var(--green)')}`;
+        ${_perfCard('🖥️ CPU',   s.cpu,              `${s.cpu}%`,             _cpuColor(s.cpu))}
+        ${_perfCard('🧠 RAM',   s.memory.percent,   `${ramGb} / ${ramTotal} GB`, _memColor(s.memory.percent))}
+        ${_perfCard('💾 Disco', s.disk?.percent ?? null, diskText,            _diskColor(s.disk?.percent ?? 0))}`;
     } catch (_) {}
   }
 
@@ -231,8 +263,9 @@ function _perfCard(label, pct, text, color) {
     </div>`;
 }
 
-const _cpuColor = pct => pct > 80 ? 'var(--red)' : pct > 50 ? '#f59e0b' : 'var(--green)';
-const _memColor = pct => pct > 85 ? 'var(--red)' : pct > 65 ? '#f59e0b' : 'var(--green)';
+const _cpuColor  = pct => pct > 80 ? 'var(--red)' : pct > 50 ? '#f59e0b' : 'var(--green)';
+const _memColor  = pct => pct > 85 ? 'var(--red)' : pct > 65 ? '#f59e0b' : 'var(--green)';
+const _diskColor = pct => pct > 90 ? 'var(--red)' : pct > 75 ? '#f59e0b' : 'var(--green)';
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 // greeting(), dateStr(), fmtBytes() are imported from ../utils/formatters.js

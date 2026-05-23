@@ -86,7 +86,7 @@ const API = {
     setSettings:(id, obj)       => request('POST', `/plugins/${id}/settings`, { settings: obj }),
   },
 
-  // Contacts plugin
+  // Contacts plugin — list returns { items, total, page, perPage }
   contacts: {
     list:        (q = {}) => request('GET',    `/contacts?${qs(q)}`),
     get:         (id)     => request('GET',    `/contacts/${id}`),
@@ -105,7 +105,7 @@ const API = {
     delete: (id)     => request('DELETE', `/notes/${id}`),
   },
 
-  // Tasks plugin
+  // Tasks plugin — list returns { items, total, page, perPage }
   tasks: {
     list:        (q = {}) => request('GET',    `/tasks?${qs(q)}`),
     get:         (id)     => request('GET',    `/tasks/${id}`),
@@ -113,6 +113,7 @@ const API = {
     update:      (id, d)  => request('PUT',    `/tasks/${id}`, d),
     delete:      (id)     => request('DELETE', `/tasks/${id}`),
     updateStatus:(id, s)  => request('PATCH',  `/tasks/${id}/status`, { status: s }),
+    listAll:     (q = {}) => request('GET',    `/tasks?${qs({ per_page: 100, ...q })}`),
   },
 
   // Settings

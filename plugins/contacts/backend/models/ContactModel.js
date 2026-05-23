@@ -3,24 +3,28 @@
 class ContactModel {
   constructor(db) { this.db = db; }
 
-  list({ search = '', status = '', active = '', username = '' } = {}) {
-    let sql  = 'SELECT * FROM contacts WHERE deleted_at IS NULL';
-    const p  = [];
+  list({ search = '', status = '', active = '', username = '', page = 1, per_page = 25 } = {}) {
+    let where = 'WHERE deleted_at IS NULL';
+    const p   = [];
 
     if (search) {
-      sql += ' AND (name LIKE ? OR email LIKE ? OR company LIKE ? OR phone LIKE ?)';
+      where += ' AND (name LIKE ? OR email LIKE ? OR company LIKE ? OR phone LIKE ?)';
       const s = `%${search}%`;
       p.push(s, s, s, s);
     }
-    if (status) { sql += ' AND status = ?';  p.push(status); }
-    if (active !== '') { sql += ' AND active = ?'; p.push(active === '1' || active === true ? 1 : 0); }
+    if (status) { where += ' AND status = ?';  p.push(status); }
+    if (active !== '') { where += ' AND active = ?'; p.push(active === '1' || active === true ? 1 : 0); }
     if (username) {
       const row = this.db.prepare('SELECT id FROM users WHERE username = ?').get(username);
-      if (row) { sql += ' AND (user_id = ? OR user_id IS NULL)'; p.push(row.id); }
+      if (row) { where += ' AND (user_id = ? OR user_id IS NULL)'; p.push(row.id); }
     }
 
-    sql += ' ORDER BY name COLLATE NOCASE ASC';
-    return this.db.prepare(sql).all(...p);
+    const orderBy = 'ORDER BY name COLLATE NOCASE ASC';
+    const total   = this.db.prepare(`SELECT COUNT(*) as n FROM contacts ${where}`).get(...p).n;
+    const offset  = (page - 1) * per_page;
+    const items   = this.db.prepare(`SELECT * FROM contacts ${where} ${orderBy} LIMIT ? OFFSET ?`).all(...p, per_page, offset);
+
+    return { items, total, page, perPage: per_page };
   }
 
   get(id) {

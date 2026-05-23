@@ -3432,6 +3432,19 @@ select.form-control { cursor: pointer; appearance: none; }
   align-items: center;
   gap: 10px;
 }
+.dash-topbar-clock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+}
+.dash-topbar-time {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.5px;
+}
 .dash-topbar-date {
   font-size: 12px;
   color: var(--text-muted);
@@ -3567,4 +3580,100 @@ select.form-control { cursor: pointer; appearance: none; }
   color: var(--text-muted);
   text-align: center;
   padding: 16px 0;
+}
+
+/* ── Universal Paginator ─────────────────────────────────────────────────── */
+.pgr-loading {
+  text-align: center;
+  padding: 32px 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+.pgr-empty {
+  text-align: center;
+  padding: 40px 20px;
+  font-size: 13px;
+  color: var(--text-muted);
+}
+.pgr-foot {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+.pgr-foot-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.pgr-info {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+.pgr-pages {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.pgr-page-btn,
+.pgr-nav-btn {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  border-radius: var(--radius-sm, 6px);
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.pgr-page-btn:hover,
+.pgr-nav-btn:hover {
+  background: var(--bg-3);
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+.pgr-page-btn.pgr-active {
+  background: var(--red);
+  border-color: var(--red);
+  color: #fff;
+  font-weight: 700;
+}
+.pgr-nav-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+.pgr-ellipsis {
+  padding: 0 4px;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 32px;
+}
+.pgr-per-page-wrap {
+  font-size: 12px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.pgr-per-page-sel {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 6px);
+  color: var(--text);
+  font-size: 12px;
+  padding: 4px 8px;
+  cursor: pointer;
+  outline: none;
+}
+.pgr-per-page-sel:focus {
+  border-color: var(--red);
 }

@@ -10,20 +10,24 @@ function userId(db, username) {
   return row ? row.id : null;
 }
 
-// GET /api/tasks
+// GET /api/tasks  — paginated: { items, total, page, perPage }
 router.get('/', validate(TaskQuerySchema, 'query'), (req, res) => {
   try {
     const db     = req.db;
-    const uid    = userId(db, req.query.username);
-    const status = req.query.status;
+    const { username, status, page, per_page } = req.query;
+    const uid    = userId(db, username);
 
-    let sql    = 'SELECT * FROM tasks WHERE deleted_at IS NULL';
-    const args = [];
-    if (uid)    { sql += ' AND user_id = ?';  args.push(uid); }
-    if (status) { sql += ' AND status = ?';   args.push(status); }
-    sql += ' ORDER BY CASE priority WHEN "urgent" THEN 0 WHEN "high" THEN 1 WHEN "medium" THEN 2 ELSE 3 END, due_date ASC';
+    let where    = 'WHERE deleted_at IS NULL';
+    const args   = [];
+    if (uid)    { where += ' AND user_id = ?'; args.push(uid); }
+    if (status) { where += ' AND status = ?';  args.push(status); }
 
-    res.json(db.prepare(sql).all(...args));
+    const orderBy = 'ORDER BY CASE priority WHEN "urgent" THEN 0 WHEN "high" THEN 1 WHEN "medium" THEN 2 ELSE 3 END, due_date ASC';
+    const total   = db.prepare(`SELECT COUNT(*) as n FROM tasks ${where}`).get(...args).n;
+    const offset  = (page - 1) * per_page;
+    const items   = db.prepare(`SELECT * FROM tasks ${where} ${orderBy} LIMIT ? OFFSET ?`).all(...args, per_page, offset);
+
+    res.json({ items, total, page, perPage: per_page });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 

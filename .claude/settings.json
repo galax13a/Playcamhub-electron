@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(\"c:/Aplications/Starcho-Electron/node_modules/electron/dist/electron.exe\" -e \"const e = require\\('electron'\\); console.log\\('app:', typeof e.app, 'keys:', Object.keys\\(e\\).slice\\(0,5\\)\\)\")",
+      "Bash(\"node_modules/electron/dist/electron.exe\" _test_electron.js)",
+      "Bash(node -e \"const d=JSON.parse\\(require\\('fs'\\).readFileSync\\('/dev/stdin','utf8'\\)\\);console.log\\(JSON.stringify\\({deps:Object.keys\\(d.dependencies||{}\\),dev:Object.keys\\(d.devDependencies||{}\\)},null,2\\)\\)\")",
+      "Bash(node -e \"const Y=require\\('yt-dlp-wrap'\\);const y=new Y.default\\(\\);console.log\\(Object.getOwnPropertyNames\\(Object.getPrototypeOf\\(y\\)\\)\\)\")",
+      "Read(//c/Users/USER/AppData/Roaming/playryu/**)",
+      "Bash(node -e \"const Y=require\\('yt-dlp-wrap'\\);console.log\\(Y.default.toString\\(\\).substring\\(0,200\\)\\)\")",
+      "Bash(node -e ' *)",
+      "Bash(git add *)"
+    ]
+  }
+}

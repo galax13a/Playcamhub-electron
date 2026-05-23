@@ -4,13 +4,13 @@
  * Structure:
  *  - Header bar (title + "New task" button)
  *  - Status filter strip (All / Pending / In-progress / Done / Cancelled)
- *  - Task item list (priority colour bar, status cycle button, due-date badge)
- *  - Edit / Create modal (title, description, status, priority, due date)
+ *  - Universal Paginator (AJAX, server-side, 5/15/25/50/100 per page)
  *
  * Status cycle order (click the status button to advance):
  *   pending → in_progress → completed → cancelled → pending
  */
 import API        from '../../../../src/renderer/utils/api.js';
+import { Paginator } from '../../../../src/renderer/utils/Paginator.js';
 import { openModal, showToast, markFieldErrors, clearFieldErrors }
                   from '../../../../src/renderer/components/Modal.js';
 import store      from '../../../../src/renderer/store.js';
@@ -32,7 +32,6 @@ const PRIORITY_LABELS = {
   urgent: '🚨 Urgente',
 };
 
-// Filter strip items — value '' means "show all"
 const FILTERS = [
   { label: 'Todas',           value: '' },
   { label: '⏳ Pendiente',    value: 'pending' },
@@ -41,8 +40,8 @@ const FILTERS = [
   { label: '❌ Cancelada',    value: 'cancelled' },
 ];
 
-// Module-level active filter (reset on each renderTaskList call)
 let _activeFilter = '';
+let _paginator    = null;
 
 export async function renderTaskList(el) {
   _activeFilter = '';
@@ -55,39 +54,39 @@ export async function renderTaskList(el) {
       wrapClass: 'tk-filters',
       wrapId:    'tk-filters',
     })}
-    <div class="tk-list" id="tk-list"><div class="tk-empty">Cargando…</div></div>
+    <div id="tk-paginator"></div>
   </div>`;
 
-  el.querySelector('#tk-new-btn').addEventListener('click', () => _openForm(null, _refresh));
+  el.querySelector('#tk-new-btn').addEventListener('click', () =>
+    _openForm(null, () => _paginator?.refresh())
+  );
 
-  // Wire filter strip — updates _activeFilter and re-fetches
   wireFilters(el, '.tk-filter', 'status', val => {
     _activeFilter = val;
-    _refresh();
+    _paginator?.setParams(_buildParams()).refresh();
   });
 
-  await _refresh();
+  _paginator = new Paginator({
+    container:      el.querySelector('#tk-paginator'),
+    fetchFn:        params => API.tasks.list({ ...params, ..._buildParams() }),
+    renderFn:       _renderList,
+    defaultPerPage: 12,
+  });
 
-  async function _refresh() {
-    const listEl   = el.querySelector('#tk-list');
-    const username = store.state.loggedUser?.username;
-    const q        = username ? { username } : {};
-    if (_activeFilter) q.status = _activeFilter;
+  await _paginator.mount();
+}
 
-    try {
-      const tasks = await API.tasks.list(q);
-      _renderList(listEl, tasks, _refresh);
-    } catch (err) {
-      listEl.innerHTML = `<div class="tk-empty" style="color:var(--red)">
-        Error al cargar tareas: ${err.message || 'Error desconocido'}
-      </div>`;
-    }
-  }
+function _buildParams() {
+  const username = store.state.loggedUser?.username;
+  const q = {};
+  if (username)     q.username = username;
+  if (_activeFilter) q.status  = _activeFilter;
+  return q;
 }
 
 // ── List renderer ──────────────────────────────────────────────────────────────
 
-function _renderList(container, tasks, refresh) {
+function _renderList(tasks, container, refresh) {
   if (!tasks.length) {
     container.innerHTML = `<div class="tk-empty">No hay tareas${_activeFilter ? ' con ese estado' : ''}.</div>`;
     return;
@@ -115,7 +114,6 @@ function _renderList(container, tasks, refresh) {
     </div>`;
   }).join('');
 
-  // Click the status badge to cycle: pending → in_progress → completed → cancelled → …
   const CYCLE = ['pending', 'in_progress', 'completed', 'cancelled'];
   container.querySelectorAll('.tk-status').forEach(btn => {
     btn.addEventListener('click', async () => {
@@ -126,7 +124,6 @@ function _renderList(container, tasks, refresh) {
     });
   });
 
-  // Edit
   container.querySelectorAll('.tk-edit').forEach(btn => {
     btn.addEventListener('click', () => {
       const task = tasks.find(t => t.id === parseInt(btn.dataset.id));
@@ -134,7 +131,6 @@ function _renderList(container, tasks, refresh) {
     });
   });
 
-  // Delete (soft)
   container.querySelectorAll('.tk-del').forEach(btn => {
     btn.addEventListener('click', async () => {
       if (!confirm('¿Eliminar esta tarea?')) return;
@@ -172,13 +168,13 @@ function _openForm(task, onSaved) {
         class: 'btn-primary',
         action: async (close, formEl) => {
           clearFieldErrors(formEl);
-          const title    = formEl.querySelector('#tk-f-title').value.trim();
+          const title       = formEl.querySelector('#tk-f-title').value.trim();
           const description = formEl.querySelector('#tk-f-desc').value.trim();
-          const status   = formEl.querySelector('#tk-f-status').value;
-          const priority = formEl.querySelector('#tk-f-priority').value;
-          const due_date = formEl.querySelector('#tk-f-due').value;
-          const username = store.state.loggedUser?.username;
-          const payload  = { title, description: description || null, status, priority, due_date: due_date || null, username };
+          const status      = formEl.querySelector('#tk-f-status').value;
+          const priority    = formEl.querySelector('#tk-f-priority').value;
+          const due_date    = formEl.querySelector('#tk-f-due').value;
+          const username    = store.state.loggedUser?.username;
+          const payload     = { title, description: description || null, status, priority, due_date: due_date || null, username };
 
           try {
             if (isEdit) {
@@ -199,6 +195,5 @@ function _openForm(task, onSaved) {
     ],
   });
 
-  // Scope focus to the last open modal overlay
   setTimeout(() => document.querySelector('.modal-overlay:last-child #tk-f-title')?.focus(), 80);
 }

@@ -41,7 +41,10 @@ export default {
       id: 'tasks-summary', zone: 'content', priority: 80, title: '✅ Tareas',
       async render(el) {
         let tasks = [];
-        try { tasks = await API.tasks.list(); } catch (_) {}
+        try {
+          const result = await API.tasks.listAll();
+          tasks = result.items ?? result;
+        } catch (_) {}
 
         const pending = tasks.filter(t => t.status === 'pending').length;
         const inProg  = tasks.filter(t => t.status === 'in_progress').length;

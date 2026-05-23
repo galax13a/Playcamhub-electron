@@ -19,6 +19,8 @@ const dueDateOrNull = z
 const TaskQuerySchema = z.object({
   username: z.string().trim().max(64).optional(),
   status:   z.enum(TASK_STATUSES).optional(),
+  page:     z.coerce.number().int().positive().optional().default(1),
+  per_page: z.coerce.number().int().min(5).max(100).optional().default(25),
 });
 
 const TaskCreateSchema = z.object({

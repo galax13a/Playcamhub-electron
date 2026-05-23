@@ -90,7 +90,7 @@ async function boot() {
   // 11. Global keyboard shortcuts
   wireKeyboard();
 
-  console.log('StarchoElectron v1.0.1-beta.1 ready 🚀');
+  console.log('StarchoElectron v1.0.2-beta.1 ready 🚀');
 }
 
 function wireWindowControls() {

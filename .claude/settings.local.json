@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(\"C:/Aplications/Starcho-Electron/node_modules/electron/dist/electron.exe\" --version)",
+      "PowerShell(& \"C:\\\\Aplications\\\\Starcho-Electron\\\\node_modules\\\\electron\\\\dist\\\\electron.exe\" --version)",
+      "Read(//c/Aplications/Starcho-Electron/node_modules/.bin/**)",
+      "Bash(node -e ' *)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\('main:', d.get\\('main'\\)\\); print\\('version:', d.get\\('version'\\)\\)\")",
+      "Bash(node -e \"const p=require\\('C:/Aplications/Starcho-Electron/node_modules/electron-log/package.json'\\); console.log\\('v:',p.version,'main:',p.main\\)\")",
+      "PowerShell(Set-Location \"c:\\\\Aplications\\\\Starcho-Electron\"; $env:ELECTRON_FORCE_DOWNLOAD = \"true\"; npm install electron --save-dev 2>&1)",
+      "PowerShell(Get-ChildItem \"$env:APPDATA\\\\PlayRyu\\\\logs\\\\\" -ErrorAction SilentlyContinue; Get-ChildItem \"$env:USERPROFILE\\\\AppData\\\\Roaming\\\\PlayRyu\\\\logs\\\\\" -ErrorAction SilentlyContinue)",
+      "Read(//c/Users/USER/AppData/Roaming/PlayRyu/logs/**)",
+      "PowerShell(Set-Location \"c:\\\\Aplications\\\\Starcho-Electron\"; Start-Process -FilePath \"node_modules\\\\electron\\\\dist\\\\electron.exe\" -ArgumentList \".\" -WindowStyle Normal; Start-Sleep -Seconds 5; Get-Content \"$env:USERPROFILE\\\\AppData\\\\Roaming\\\\PlayRyu\\\\logs\\\\main.log\" | Select-Object -Last 10)",
+      "PowerShell(Set-Location \"c:\\\\Aplications\\\\Starcho-Electron\"; $p = Start-Process -FilePath \"node_modules\\\\electron\\\\dist\\\\electron.exe\" -ArgumentList \".\" -PassThru; Start-Sleep -Seconds 8; Get-Content \"$env:USERPROFILE\\\\AppData\\\\Roaming\\\\PlayRyu\\\\logs\\\\main.log\" | Select-Object -Last 8; $p.HasExited)",
+      "PowerShell(Get-Process -Name \"electron\" -ErrorAction SilentlyContinue)",
+      "PowerShell(Stop-Process -Force)",
+      "PowerShell(\"Killed\")",
+      "PowerShell(Set-Location \"c:\\\\Aplications\\\\Starcho-Electron\"; $p = Start-Process -FilePath \"node_modules\\\\electron\\\\dist\\\\electron.exe\" -ArgumentList \".\" -PassThru; Start-Sleep -Seconds 8; Get-Content \"$env:USERPROFILE\\\\AppData\\\\Roaming\\\\PlayRyu\\\\logs\\\\main.log\" | Select-Object -Last 8; Write-Host \"HasExited: $\\($p.HasExited\\)\")",
+      "PowerShell(Get-Process -Name \"electron\" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 1; Set-Location \"c:\\\\Aplications\\\\Starcho-Electron\"; $p = Start-Process -FilePath \"node_modules\\\\electron\\\\dist\\\\electron.exe\" -ArgumentList \".\" -PassThru; Start-Sleep -Seconds 6; Get-Content \"$env:USERPROFILE\\\\AppData\\\\Roaming\\\\PlayRyu\\\\logs\\\\main.log\" | Select-Object -Last 6; Write-Host \"Still running: $\\(-not $p.HasExited\\)\")",
+      "PowerShell(Get-Process -Name \"PlayRyu\",\"electron\" -ErrorAction SilentlyContinue)",
+      "PowerShell(Stop-Process -Name \"PlayRyu\",\"electron\" -Force -ErrorAction SilentlyContinue)"
+    ]
+  }
+}

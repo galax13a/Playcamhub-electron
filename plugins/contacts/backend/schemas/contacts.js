@@ -11,6 +11,8 @@ const ContactQuerySchema = z.object({
   status:   z.string().trim().max(50).optional(),
   active:   z.string().optional(),
   username: z.string().trim().max(64).optional(),
+  page:     z.coerce.number().int().positive().optional().default(1),
+  per_page: z.coerce.number().int().min(5).max(100).optional().default(25),
 });
 
 const ContactCreateSchema = z.object({

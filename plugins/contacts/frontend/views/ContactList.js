@@ -4,14 +4,10 @@
  * Structure:
  *  - Header bar (title + search input + "New contact" button)
  *  - Status filter strip (All / Lead / Prospect / Customer / Inactive)
- *  - Card grid (one card per contact, 3-column responsive)
- *  - Edit / Create modal (openModal pattern from Modal.js)
- *
- * State is local to the render call:
- *  - _activeStatus — tracks the currently selected filter
- *  - _searchTimer  — debounce handle for the search input
+ *  - Universal Paginator (AJAX, server-side, 5/15/25/50/100 per page)
  */
 import API        from '../../../../src/renderer/utils/api.js';
+import { Paginator } from '../../../../src/renderer/utils/Paginator.js';
 import { openModal, showToast, markFieldErrors, clearFieldErrors }
                   from '../../../../src/renderer/components/Modal.js';
 import store      from '../../../../src/renderer/store.js';
@@ -20,7 +16,6 @@ import { esc, formGroup, grid }
 import { viewHeader, filterBar, wireFilters }
                   from '../../../../src/renderer/components/ui.js';
 
-// Status metadata: value → display label + brand color
 const STATUS_META = {
   lead:     { label: 'Lead',      color: '#60a5fa' },
   prospect: { label: 'Prospect',  color: '#f59e0b' },
@@ -28,7 +23,6 @@ const STATUS_META = {
   churned:  { label: 'Inactivo',  color: '#6b7280' },
 };
 
-// Filter strip items — value '' means "show all"
 const FILTERS = [
   { label: 'Todos',       value: '' },
   { label: '🔵 Lead',     value: 'lead' },
@@ -37,11 +31,13 @@ const FILTERS = [
   { label: '⚫ Inactivo', value: 'churned' },
 ];
 
-// Module-level active filter (reset on each renderContactList call)
 let _activeStatus = '';
+let _search       = '';
+let _paginator    = null;
 
 export async function renderContactList(el) {
   _activeStatus = '';
+  _search       = '';
 
   el.innerHTML = `
     <div class="ct-container">
@@ -56,59 +52,59 @@ export async function renderContactList(el) {
         wrapClass: 'ct-filters',
         wrapId:    'ct-filters',
       })}
-      <div class="ct-grid" id="ct-grid">
-        <div class="ct-empty">Cargando…</div>
-      </div>
+      <div id="ct-paginator"></div>
     </div>`;
 
   // Debounced search
   let _searchTimer;
   el.querySelector('#ct-search').addEventListener('input', e => {
     clearTimeout(_searchTimer);
-    _searchTimer = setTimeout(() => _refresh(e.target.value.trim()), 250);
+    _searchTimer = setTimeout(() => {
+      _search = e.target.value.trim();
+      _paginator?.setParams(_buildParams()).refresh();
+    }, 250);
   });
 
-  el.querySelector('#ct-new-btn').addEventListener('click', () => _openForm(null, _refresh));
+  el.querySelector('#ct-new-btn').addEventListener('click', () =>
+    _openForm(null, () => _paginator?.refresh())
+  );
 
-  // Wire filter strip — updates _activeStatus and re-fetches
   wireFilters(el, '.ct-filter', 'status', val => {
     _activeStatus = val;
-    _refresh(el.querySelector('#ct-search').value.trim());
+    _paginator?.setParams(_buildParams()).refresh();
   });
 
-  await _refresh('');
+  _paginator = new Paginator({
+    container:      el.querySelector('#ct-paginator'),
+    fetchFn:        params => API.contacts.list({ ...params, ..._buildParams() }),
+    renderFn:       _renderGrid,
+    defaultPerPage: 12,
+  });
 
-  // Inner refresh — re-fetches and re-renders the grid
-  async function _refresh(search = '') {
-    const username = store.state.loggedUser?.username;
-    const q = { search };
-    if (_activeStatus) q.status   = _activeStatus;
-    if (username)      q.username = username;
+  await _paginator.mount();
+}
 
-    const gridEl = el.querySelector('#ct-grid');
-    try {
-      const contacts = await API.contacts.list(q);
-      _renderGrid(gridEl, contacts, () => _refresh(search));
-    } catch (err) {
-      gridEl.innerHTML = `<div class="ct-empty" style="color:var(--red)">
-        Error al cargar contactos: ${err.message || 'Error desconocido'}
-      </div>`;
-    }
-  }
+function _buildParams() {
+  const username = store.state.loggedUser?.username;
+  const q = {};
+  if (_search)       q.search   = _search;
+  if (_activeStatus) q.status   = _activeStatus;
+  if (username)      q.username = username;
+  return q;
 }
 
 // ── Grid renderer ──────────────────────────────────────────────────────────────
 
-function _renderGrid(container, contacts, refresh) {
+function _renderGrid(contacts, container, refresh) {
   if (!contacts.length) {
     container.innerHTML = `<div class="ct-empty">
       <div style="font-size:48px;margin-bottom:12px">👥</div>
-      <p>${_activeStatus ? 'Sin contactos con ese estado' : 'Aún no hay contactos. ¡Agrega el primero!'}</p>
+      <p>${_activeStatus ? 'Sin contactos con ese estado' : _search ? 'Sin resultados para esa búsqueda' : 'Aún no hay contactos. ¡Agrega el primero!'}</p>
     </div>`;
     return;
   }
 
-  container.innerHTML = contacts.map(c => _card(c)).join('');
+  container.innerHTML = `<div class="ct-grid">${contacts.map(c => _card(c)).join('')}</div>`;
 
   container.querySelectorAll('.ct-card').forEach(card => {
     const id = parseInt(card.dataset.id);
@@ -135,7 +131,6 @@ function _renderGrid(container, contacts, refresh) {
   });
 }
 
-// Single contact card — renders initials avatar, status badge, and action buttons
 function _card(c) {
   const initials = c.name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
   const sm       = STATUS_META[c.status] || STATUS_META.lead;
@@ -179,7 +174,6 @@ function _openForm(contact, onSaved) {
   const isEdit = !!contact;
   const c      = contact || {};
 
-  // Build <option> list with current status pre-selected
   const statusOpts = Object.entries(STATUS_META).map(([v, m]) =>
     `<option value="${v}" ${(c.status || 'lead') === v ? 'selected' : ''}>${m.label}</option>`).join('');
 
@@ -238,6 +232,5 @@ function _openForm(contact, onSaved) {
     ],
   });
 
-  // Scope focus to the last open modal
   setTimeout(() => document.querySelector('.modal-overlay:last-child #cf-name')?.focus(), 80);
 }
