@@ -49,7 +49,10 @@ export function initSidebar(el) {
     const avatarEl = el.querySelector('.sb-avatar');
     const nameEl   = el.querySelector('.sb-nickname');
     if (avatarEl) avatarEl.src = s.avatar || DEFAULT_AVATAR;
-    if (nameEl)   nameEl.textContent = s.nickname || s.full_name || store.state.loggedUser?.username || 'You';
+    if (nameEl) {
+      const u = store.state.loggedUser;
+      nameEl.textContent = s.nickname || s.full_name || u?.username || u?.name || 'Usuario';
+    }
   });
 
   EventBus.on('store:loggedUser', () => _rebuild(el));
@@ -116,7 +119,7 @@ function _toggleGroup(el) {
 function _html(s = {}) {
   const cfg         = store.state.appConfig;
   const loggedUser  = store.state.loggedUser;
-  const displayName = s.nickname || s.full_name || loggedUser?.username || 'You';
+  const displayName = s.nickname || s.full_name || loggedUser?.username || loggedUser?.name || 'Usuario';
   const pluginNav   = PluginRegistry.getNavItems();
   const cur         = store.state.currentView;
 

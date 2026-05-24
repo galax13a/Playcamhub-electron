@@ -76,11 +76,19 @@ function runMigrations(db) {
 
   // Default settings
   const defaults = [
-    ['theme',       'dark'],
-    ['volume',      '80'],
-    ['auto_play',   'true'],
-    ['language',    'es'],
-    ['login_theme', 'nebula'],
+    ['theme',            'dark'],
+    ['volume',           '80'],
+    ['auto_play',        'true'],
+    ['language',         'es'],
+    ['login_theme',      'nebula'],
+    ['session_ttl_days',   '30'],
+    ['ai_provider',        'openai'],
+    ['ai_openai_key',      ''],
+    ['ai_openai_model',    'dall-e-2'],
+    ['ai_stability_key',   ''],
+    ['ai_stability_model', 'stable-diffusion-xl-1024-v1-0'],
+    ['ai_replicate_key',   ''],
+    ['ai_replicate_model', 'black-forest-labs/flux-dev'],
   ];
   const upsert = db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)');
   defaults.forEach(([k, v]) => upsert.run(k, v));

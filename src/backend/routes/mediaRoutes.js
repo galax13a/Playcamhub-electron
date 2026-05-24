@@ -8,6 +8,14 @@ const sharp  = require('sharp');
 const { v4: uuidv4 } = require('uuid');
 const { getDb } = require('../database/connection');
 
+// ── Ensure download_count column exists (idempotent) ─────────────────────────
+function _ensureDownloadCount() {
+  try {
+    getDb().prepare('ALTER TABLE media ADD COLUMN download_count INTEGER DEFAULT 0').run();
+  } catch (_) { /* column already exists — ignore */ }
+}
+_ensureDownloadCount();
+
 // multer: destination resolves per-request from req.appPaths (set by server.js middleware)
 const upload = multer({
   storage: multer.diskStorage({
@@ -23,8 +31,8 @@ const upload = multer({
   fileFilter: (_req, file, cb) => {
     const ok = [
       'image/jpeg','image/png','image/webp','image/gif','image/bmp',
-      'video/mp4','video/quicktime','video/webm','video/x-msvideo',
-    ].includes(file.mimetype);
+      'video/mp4','video/quicktime','video/x-msvideo',
+    ].includes(file.mimetype) || file.mimetype.startsWith('video/webm');
     cb(ok ? null : new Error('Tipo de archivo no permitido'), ok);
   },
   limits: { fileSize: 500 * 1024 * 1024 }, // 500 MB
@@ -32,19 +40,29 @@ const upload = multer({
 
 // ── GET /api/media ────────────────────────────────────────────────────────────
 router.get('/', (req, res) => {
-  const { page = 1, perPage = 20, type, search, favorite, albumId } = req.query;
+  const { page = 1, perPage = 20, type, search, favorite, albumId, sortBy, minSize } = req.query;
   const db = getDb();
   try {
     let q = 'SELECT * FROM media WHERE 1=1';
     const params = [];
     if (type && type !== 'all') { q += ' AND media_type = ?'; params.push(type); }
     if (favorite === 'true')    { q += ' AND is_favorite = 1'; }
-    if (search)                 { q += ' AND file_name LIKE ?'; params.push(`%${search}%`); }
+    if (search)                 { q += ' AND (file_name LIKE ? OR COALESCE(title,"") LIKE ?)'; params.push(`%${search}%`, `%${search}%`); }
     if (albumId)                { q += ' AND album_id = ?'; params.push(parseInt(albumId)); }
 
     const cnt    = db.prepare(q.replace('SELECT *', 'SELECT COUNT(*) as cnt')).get(...params).cnt;
     const offset = (parseInt(page) - 1) * parseInt(perPage);
-    q += ' ORDER BY created_at DESC LIMIT ? OFFSET ?';
+    const sortMap = {
+      date_desc:  'created_at DESC',
+      date_asc:   'created_at ASC',
+      size_desc:  'file_size DESC',
+      views:      'view_count DESC',
+      likes:      'likes DESC',
+      rating:     'rating DESC',
+    };
+    const orderBy = sortMap[sortBy] || 'created_at DESC';
+    if (minSize) { q += ' AND file_size >= ?'; params.push(parseInt(minSize)); }
+    q += ` ORDER BY ${orderBy} LIMIT ? OFFSET ?`;
     params.push(parseInt(perPage), offset);
 
     res.json({ items: db.prepare(q).all(...params), total: cnt, page: parseInt(page), perPage: parseInt(perPage) });
@@ -180,6 +198,86 @@ router.post('/upload', upload.single('file'), async (req, res) => {
   } catch (err) {
     console.error('[media] upload:', err.message);
     if (fs.existsSync(tmpPath)) try { fs.unlinkSync(tmpPath); } catch (_) {}
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── POST /api/media/:id/like ──────────────────────────────────────────────────
+router.post('/:id/like', (req, res) => {
+  const db = getDb();
+  try {
+    const m = db.prepare('SELECT likes FROM media WHERE id = ?').get(req.params.id);
+    if (!m) return res.status(404).json({ error: 'Not found' });
+    const next = (m.likes || 0) + 1;
+    db.prepare('UPDATE media SET likes = ? WHERE id = ?').run(next, req.params.id);
+    res.json({ likes: next });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ── POST /api/media/:id/rate ──────────────────────────────────────────────────
+router.post('/:id/rate', (req, res) => {
+  const db = getDb();
+  const r = parseFloat(req.body.rating);
+  if (!r || r < 1 || r > 10) return res.status(400).json({ error: 'Rating must be 1–10' });
+  try {
+    const m = db.prepare('SELECT rating, rating_count FROM media WHERE id = ?').get(req.params.id);
+    if (!m) return res.status(404).json({ error: 'Not found' });
+    const count = (m.rating_count || 0) + 1;
+    const avg   = ((m.rating || 0) * (m.rating_count || 0) + r) / count;
+    db.prepare('UPDATE media SET rating = ?, rating_count = ? WHERE id = ?').run(avg, count, req.params.id);
+    res.json({ rating: avg, rating_count: count });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ── PATCH /api/media/:id/meta ─────────────────────────────────────────────────
+router.patch('/:id/meta', (req, res) => {
+  const db = getDb();
+  const { title = '', description = '' } = req.body;
+  try {
+    const m = db.prepare('SELECT id FROM media WHERE id = ?').get(req.params.id);
+    if (!m) return res.status(404).json({ error: 'Not found' });
+    db.prepare('UPDATE media SET title = ?, description = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+      .run(title, description, req.params.id);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ── POST /api/media/:id/video-thumb ──────────────────────────────────────────
+// Receives a PNG blob from canvas capture and stores it as WEBP thumbnail.
+const thumbUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, _file, cb) => {
+      const dir = path.join(req.appPaths.userData, 'media');
+      fs.mkdirSync(dir, { recursive: true });
+      cb(null, dir);
+    },
+    filename: (_req, _file, cb) => cb(null, `${uuidv4()}_vthumb_tmp.png`),
+  }),
+  limits: { fileSize: 10 * 1024 * 1024 },
+});
+router.post('/:id/video-thumb', thumbUpload.single('thumb'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No thumbnail received' });
+  const db = getDb();
+  try {
+    const m = db.prepare('SELECT id, thumbnail_path FROM media WHERE id = ?').get(req.params.id);
+    if (!m) { try { fs.unlinkSync(req.file.path); } catch (_) {} return res.status(404).json({ error: 'Not found' }); }
+
+    const mediaDir  = path.join(req.appPaths.userData, 'media');
+    const thumbPath = path.join(mediaDir, `${uuidv4()}_thumb.webp`);
+
+    await sharp(req.file.path)
+      .resize(400, 225, { fit: 'cover', withoutEnlargement: true })
+      .webp({ quality: 75 })
+      .toFile(thumbPath);
+
+    try { fs.unlinkSync(req.file.path); } catch (_) {}
+    if (m.thumbnail_path) { try { if (fs.existsSync(m.thumbnail_path)) fs.unlinkSync(m.thumbnail_path); } catch (_) {} }
+
+    db.prepare('UPDATE media SET thumbnail_path = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+      .run(thumbPath, req.params.id);
+    res.json({ success: true });
+  } catch (err) {
+    try { fs.unlinkSync(req.file.path); } catch (_) {}
     res.status(500).json({ error: err.message });
   }
 });
@@ -323,6 +421,227 @@ router.post('/:id/edit', async (req, res) => {
     res.json({ success: true });
   } catch (err) {
     console.error('[media] edit:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── POST /api/media/:id/replace ──────────────────────────────────────────────
+// Receives a rendered PNG/JPEG (from canvas export) and replaces the media file.
+const replaceUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, _file, cb) => {
+      const dir = path.join(req.appPaths.userData, 'media');
+      fs.mkdirSync(dir, { recursive: true });
+      cb(null, dir);
+    },
+    filename: (_req, _file, cb) => cb(null, `${uuidv4()}_replace_tmp.png`),
+  }),
+  limits: { fileSize: 200 * 1024 * 1024 },
+});
+router.post('/:id/replace', replaceUpload.single('image'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No image received' });
+  const db = getDb();
+  try {
+    const m = db.prepare('SELECT * FROM media WHERE id = ?').get(req.params.id);
+    if (!m) { try { fs.unlinkSync(req.file.path); } catch (_) {} return res.status(404).json({ error: 'Not found' }); }
+
+    const mediaDir  = path.join(req.appPaths.userData, 'media');
+    const base      = path.join(mediaDir, uuidv4());
+    const newPath   = `${base}.webp`;
+    const newThumb  = `${base}_thumb.webp`;
+
+    const meta = await sharp(req.file.path).metadata();
+    await sharp(req.file.path).webp({ quality: 90 }).toFile(newPath);
+    await sharp(req.file.path)
+      .resize(400, 400, { fit: 'inside', withoutEnlargement: true })
+      .webp({ quality: 75 })
+      .toFile(newThumb);
+
+    try { fs.unlinkSync(req.file.path); } catch (_) {}
+
+    const newSize = fs.statSync(newPath).size;
+    db.prepare(`
+      UPDATE media SET file_path=?, thumbnail_path=?, file_size=?,
+        width=?, height=?, mime_type='image/webp', compressed_format='webp',
+        updated_at=CURRENT_TIMESTAMP
+      WHERE id=?
+    `).run(newPath, newThumb, newSize, meta.width || m.width, meta.height || m.height, req.params.id);
+
+    const oldFiles = [m.file_path, m.thumbnail_path].filter(p => p && p !== newPath && p !== newThumb);
+    setImmediate(() => oldFiles.forEach(p => {
+      const tryDel = n => { try { if (fs.existsSync(p)) fs.unlinkSync(p); } catch (_) { if (n > 0) setTimeout(() => tryDel(n-1), 1000); } };
+      tryDel(4);
+    }));
+
+    res.json({ success: true, width: meta.width, height: meta.height });
+  } catch (err) {
+    try { fs.unlinkSync(req.file.path); } catch (_) {}
+    console.error('[media] replace:', err.message);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── PATCH /api/media/:id/rename ──────────────────────────────────────────────
+// Updates file_name (display name) in DB only — actual file uses a UUID path.
+router.patch('/:id/rename', (req, res) => {
+  const db = getDb();
+  const newName = (req.body.file_name || '').trim();
+  if (!newName) return res.status(400).json({ error: 'file_name required' });
+  try {
+    const m = db.prepare('SELECT id FROM media WHERE id = ?').get(req.params.id);
+    if (!m) return res.status(404).json({ error: 'Not found' });
+    db.prepare('UPDATE media SET file_name = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+      .run(newName, req.params.id);
+    res.json({ success: true, file_name: newName });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ── GET /api/media/:id/download ───────────────────────────────────────────────
+router.get('/:id/download', (req, res) => {
+  const db = getDb();
+  try {
+    const m = db.prepare('SELECT file_path, file_name FROM media WHERE id = ?').get(req.params.id);
+    if (!m) return res.status(404).json({ error: 'Not found' });
+    if (!fs.existsSync(m.file_path)) return res.status(404).json({ error: 'File not found on disk' });
+    db.prepare('UPDATE media SET download_count = COALESCE(download_count,0) + 1 WHERE id = ?').run(req.params.id);
+    res.download(m.file_path, m.file_name);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ── GET /api/media/:id/comments ───────────────────────────────────────────────
+router.get('/:id/comments', (req, res) => {
+  const db = getDb();
+  try {
+    const rows = db.prepare(`SELECT * FROM comments WHERE entity_type='media' AND entity_id=? ORDER BY created_at DESC LIMIT 50`).all(req.params.id);
+    res.json(rows);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ── POST /api/media/:id/comments ──────────────────────────────────────────────
+router.post('/:id/comments', (req, res) => {
+  const db = getDb();
+  const text   = (req.body.text || '').trim();
+  const author = (req.body.author || 'Usuario').trim();
+  if (!text) return res.status(400).json({ error: 'text required' });
+  try {
+    const r = db.prepare(`INSERT INTO comments (entity_type, entity_id, text, author) VALUES ('media',?,?,?)`).run(req.params.id, text, author);
+    res.json({ id: r.lastInsertRowid, text, author, created_at: new Date().toISOString() });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// ── POST /api/media/:id/trim ──────────────────────────────────────────────────
+// Trims a video using ffmpeg. Overwrites the original file with the trimmed segment.
+router.post('/:id/trim', (req, res) => {
+  const db       = getDb();
+  const startSec = parseFloat(req.body.start);
+  const endSec   = parseFloat(req.body.end);
+
+  if (isNaN(startSec) || isNaN(endSec) || startSec < 0 || endSec <= startSec) {
+    return res.status(400).json({ error: 'Parámetros start/end inválidos (start debe ser < end)' });
+  }
+  try {
+    const m = db.prepare('SELECT * FROM media WHERE id = ?').get(req.params.id);
+    if (!m) return res.status(404).json({ error: 'Not found' });
+    if (m.media_type !== 'video') return res.status(400).json({ error: 'Solo se pueden cortar videos' });
+
+    const ffmpeg     = require('fluent-ffmpeg');
+    const inputPath  = m.file_path;
+    const ext        = path.extname(inputPath);
+    const outputPath = path.join(path.dirname(inputPath), uuidv4() + ext);
+
+    ffmpeg(inputPath)
+      .setStartTime(startSec)
+      .setDuration(endSec - startSec)
+      .output(outputPath)
+      .on('end', () => {
+        try {
+          const stat = fs.statSync(outputPath);
+          db.prepare('UPDATE media SET file_path = ?, file_size = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+            .run(outputPath, stat.size, m.id);
+          try { fs.unlinkSync(inputPath); } catch (_) {}
+          res.json({ success: true, file_size: stat.size });
+        } catch (err) { res.status(500).json({ error: err.message }); }
+      })
+      .on('error', (err) => {
+        try { fs.unlinkSync(outputPath); } catch (_) {}
+        res.status(500).json({ error: 'FFmpeg: ' + err.message });
+      })
+      .run();
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── POST /api/media/:id/gif ───────────────────────────────────────────────────
+// Converts the first N seconds of a video to an animated GIF using ffmpeg.
+// Body: { start?: number, duration?: number }  (duration capped at 10s)
+// Returns: { id, file_path } on success, or { error } with 500 if ffmpeg unavailable.
+router.post('/:id/gif', (req, res) => {
+  const db = getDb();
+  try {
+    const m = db.prepare('SELECT * FROM media WHERE id = ?').get(req.params.id);
+    if (!m) return res.status(404).json({ error: 'Not found' });
+    if (m.media_type !== 'video') return res.status(400).json({ error: 'Solo se pueden convertir videos' });
+
+    let ffmpeg;
+    try { ffmpeg = require('fluent-ffmpeg'); }
+    catch (_) { return res.status(500).json({ error: 'FFmpeg no disponible' }); }
+
+    const startSec    = Math.max(0, parseFloat(req.body.start)    || 0);
+    const durationSec = Math.min(10, Math.max(0.5, parseFloat(req.body.duration) || 10));
+
+    const inputPath = m.file_path;
+    const gifName   = uuidv4() + '.gif';
+    const gifPath   = path.join(path.dirname(inputPath), gifName);
+
+    // Two-pass GIF with optimized palette
+    const palettePath = path.join(path.dirname(inputPath), uuidv4() + '_palette.png');
+
+    // Pass 1 — generate palette
+    ffmpeg(inputPath)
+      .setStartTime(startSec)
+      .setDuration(durationSec)
+      .videoFilters('fps=12,scale=480:-1:flags=lanczos,palettegen=stats_mode=diff')
+      .output(palettePath)
+      .on('end', () => {
+        // Pass 2 — apply palette
+        ffmpeg()
+          .input(inputPath)
+          .inputOptions([`-ss ${startSec}`, `-t ${durationSec}`])
+          .input(palettePath)
+          .complexFilter('fps=12,scale=480:-1:flags=lanczos[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle')
+          .output(gifPath)
+          .on('end', () => {
+            try { if (fs.existsSync(palettePath)) fs.unlinkSync(palettePath); } catch (_) {}
+            try {
+              const stat    = fs.statSync(gifPath);
+              const baseName = path.basename(m.file_name || 'video', path.extname(m.file_name || ''));
+              const result  = db.prepare(`
+                INSERT INTO media (file_name, file_path, file_size, mime_type, media_type, original_format, compressed_format)
+                VALUES (?, ?, ?, 'image/gif', 'photo', 'gif', 'gif')
+              `).run(`${baseName}.gif`, gifPath, stat.size);
+              res.json({ id: result.lastInsertRowid, file_path: gifPath });
+            } catch (err) { res.status(500).json({ error: err.message }); }
+          })
+          .on('error', (err) => {
+            try { if (fs.existsSync(palettePath)) fs.unlinkSync(palettePath); } catch (_) {}
+            try { if (fs.existsSync(gifPath))     fs.unlinkSync(gifPath);     } catch (_) {}
+            if (err.message && err.message.toLowerCase().includes('ffmpeg')) {
+              return res.status(500).json({ error: 'FFmpeg no disponible' });
+            }
+            res.status(500).json({ error: 'FFmpeg GIF pass 2: ' + err.message });
+          })
+          .run();
+      })
+      .on('error', (err) => {
+        try { if (fs.existsSync(palettePath)) fs.unlinkSync(palettePath); } catch (_) {}
+        if (err.message && err.message.toLowerCase().includes('ffmpeg')) {
+          return res.status(500).json({ error: 'FFmpeg no disponible' });
+        }
+        res.status(500).json({ error: 'FFmpeg GIF pass 1: ' + err.message });
+      })
+      .run();
+  } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });

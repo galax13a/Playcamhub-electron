@@ -69,14 +69,23 @@
   wireToggle('lp-toggle-pw',  'lp-password',  'lp-eye-icon');
   wireToggle('reg-toggle-pw', 'reg-password', 'reg-eye-icon');
 
-  // ── Auto-login via stored session token (7-day, no password stored) ─────────
-  // Migrate old auth_remember (stored plaintext password) → remove it on first run
+  // ── Auto-login via stored session token (persistent, no password stored) ────
+  // Always stored in localStorage so sessions survive app restarts.
+  // Migrate any leftover sessionStorage entries from older versions.
   localStorage.removeItem('auth_remember');
+  (function migrateSS() {
+    try {
+      var ss = sessionStorage.getItem('auth_session');
+      if (ss && !localStorage.getItem('auth_session')) {
+        localStorage.setItem('auth_session', ss);
+      }
+      sessionStorage.removeItem('auth_session');
+    } catch (_) {}
+  }());
 
   function getStoredSession() {
     try {
-      var raw = sessionStorage.getItem('auth_session') || localStorage.getItem('auth_session');
-      return JSON.parse(raw || 'null');
+      return JSON.parse(localStorage.getItem('auth_session') || 'null');
     } catch (_) {
       return null;
     }
@@ -106,6 +115,13 @@
       return res.json().then(function (data) { return { ok: res.ok, data: data }; });
     }).then(function (r) {
       if (r.ok) {
+        // Refresh the stored session with renewed expiresAt (rolling window from server)
+        if (r.data.expiresAt) {
+          try {
+            var updated = Object.assign({}, storedSession, { expiresAt: r.data.expiresAt });
+            localStorage.setItem('auth_session', JSON.stringify(updated));
+          } catch (_) {}
+        }
         window.dispatchEvent(new CustomEvent('user:login', { detail: r.data }));
         enter();
       } else {
@@ -191,12 +207,10 @@
             username:   r.data.username || user,
             expiresAt:  r.data.expiresAt,
           };
-          if (rememberCk.checked && r.data.token) {
+          // Always persist to localStorage so sessions survive Electron restarts.
+          if (r.data.token) {
             localStorage.setItem('auth_session', JSON.stringify(sessionData));
             sessionStorage.removeItem('auth_session');
-          } else if (r.data.token) {
-            sessionStorage.setItem('auth_session', JSON.stringify(sessionData));
-            localStorage.removeItem('auth_session');
           } else {
             clearStoredSession();
           }

@@ -18,10 +18,12 @@ export default {
   hasSidebarPlaylists: false,
 
   navItems: [
-    { view: 'starcho:gallery',  icon: '🖼️', labelKey: 'nav_gallery',   label: 'Gallery'   },
-    { view: 'starcho:albums',   icon: '📁', labelKey: 'nav_albums',    label: 'Albums'    },
-    { view: 'starcho:upload',   icon: '📤', labelKey: 'nav_upload',    label: 'Upload'    },
-    { view: 'starcho:favorites',icon: '⭐', labelKey: 'nav_favorites', label: 'Favorites' },
+    { view: 'starcho:gallery',    icon: '📸', labelKey: 'nav_gallery',    label: 'Gallery'   },
+    { view: 'starcho:albums',     icon: '📁', labelKey: 'nav_albums',     label: 'Albums'    },
+    { view: 'starcho:video-feed', icon: '📹', labelKey: 'nav_video_feed', label: 'Feed'      },
+    { view: 'starcho:camera',     icon: '📷', labelKey: 'nav_camera',     label: 'Grabar'    },
+    { view: 'starcho:upload',     icon: '📤', labelKey: 'nav_upload',     label: 'Upload'    },
+    { view: 'starcho:favorites',  icon: '⭐', labelKey: 'nav_favorites',  label: 'Favorites' },
   ],
 
   views: {
@@ -32,6 +34,10 @@ export default {
     'starcho:albums': async (el, extra) => {
       const { renderAlbums } = await import('./views/Albums.js');
       renderAlbums(el, extra);
+    },
+    'starcho:video-feed': async (el, extra) => {
+      const { renderVideoFeed } = await import('./views/VideoFeed.js');
+      renderVideoFeed(el, extra);
     },
     'starcho:upload': async (el, extra) => {
       const { renderUpload } = await import('./views/Upload.js');
@@ -49,6 +55,14 @@ export default {
       const { renderVideoViewer } = await import('./views/VideoViewer.js');
       renderVideoViewer(el, extra);
     },
+    'starcho:video-editor': async (el, extra) => {
+      const { renderVideoEditor } = await import('./views/VideoEditor.js');
+      renderVideoEditor(el, extra);
+    },
+    'starcho:camera': async (el, extra) => {
+      const { renderCamera } = await import('./views/Camera.js');
+      renderCamera(el, extra);
+    },
   },
 
   // ── Dashboard widgets ──────────────────────────────────────────────────────
@@ -60,7 +74,7 @@ export default {
       id:       'mediahub-stats',
       zone:     'content',
       priority: 100,
-      title:    '🖼️ MediaHub',
+      title:    '📸 MediaHub',
       async render(el) {
         let totalPhotos = 0;
         let totalVideos = 0;

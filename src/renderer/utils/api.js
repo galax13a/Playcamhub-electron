@@ -100,6 +100,7 @@ const API = {
     updateProfile: (d)        => request('PUT', '/auth/profile', d),
   },
   setAuthToken,
+  getBase,
 
   // Plugin management + per-plugin DB settings (prefix plugin_{id}_ in settings table)
   plugins: {
@@ -165,22 +166,43 @@ const API = {
 
   // Media (photos / videos — starcho MediaHub plugin)
   media: {
-    list:     (q = {}) => request('GET',    `/media?${qs(q)}`),
-    get:      (id)     => request('GET',    `/media/${id}`),
-    stats:    ()       => request('GET',    '/media/stats'),
-    favorite: (id)     => request('POST',   `/media/${id}/favorite`),
-    delete:   (id)     => request('DELETE', `/media/${id}`),
-    edit:     (id, d)  => request('POST',   `/media/${id}/edit`, d),
+    list:       (q = {}) => request('GET',    `/media?${qs(q)}`),
+    get:        (id)     => request('GET',    `/media/${id}`),
+    stats:      ()       => request('GET',    '/media/stats'),
+    favorite:   (id)     => request('POST',   `/media/${id}/favorite`),
+    delete:     (id)     => request('DELETE', `/media/${id}`),
+    edit:       (id, d)  => request('POST',   `/media/${id}/edit`, d),
+    like:       (id)     => request('POST',   `/media/${id}/like`),
+    rate:       (id, r)  => request('POST',   `/media/${id}/rate`, { rating: r }),
+    updateMeta: (id, d)  => request('PATCH',  `/media/${id}/meta`, d),
+    rename:     (id, n)  => request('PATCH',  `/media/${id}/rename`, { file_name: n }),
+    trim:        (id, start, end)       => request('POST',   `/media/${id}/trim`, { start, end }),
+    comments:    (id)                   => request('GET',    `/media/${id}/comments`),
+    addComment:  (id, text, author)     => request('POST',   `/media/${id}/comments`, { text, author }),
+    downloadUrl: (id) => { const t = getAuthToken(); return `${BASE}/api/media/${id}/download${t ? '?token=' + encodeURIComponent(t) : ''}`; },
+    replace:    (id, blob) => {
+      const fd = new FormData(); fd.append('image', blob, 'export.png');
+      const token = getAuthToken();
+      return fetch(`${BASE}/api/media/${id}/replace`, {
+        method: 'POST',
+        headers: token ? { Authorization: 'Bearer ' + token } : {},
+        body: fd,
+      }).then(r => r.json().then(d => { if (!r.ok) throw new Error(d.error || `HTTP ${r.status}`); return d; }));
+    },
   },
 
   // Albums (starcho MediaHub plugin)
   albums: {
-    list:     ()              => request('GET',    '/albums'),
-    get:      (id)            => request('GET',    `/albums/${id}`),
-    create:   (d)             => request('POST',   '/albums', d),
-    update:   (id, d)         => request('PUT',    `/albums/${id}`, d),
-    delete:   (id)            => request('DELETE', `/albums/${id}`),
-    addMedia: (id, mediaIds)  => request('POST',   `/albums/${id}/add-media`, { mediaIds }),
+    list:       ()             => request('GET',    '/albums'),
+    get:        (id)           => request('GET',    `/albums/${id}`),
+    create:     (d)            => request('POST',   '/albums', d),
+    update:     (id, d)        => request('PUT',    `/albums/${id}`, d),
+    delete:     (id)           => request('DELETE', `/albums/${id}`),
+    addMedia:   (id, mediaIds) => request('POST',   `/albums/${id}/add-media`, { mediaIds }),
+    recordView: (id)           => request('POST',   `/albums/${id}/view`),
+    favorite:   (id)           => request('POST',   `/albums/${id}/favorite`),
+    comments:   (id)           => request('GET',    `/albums/${id}/comments`),
+    addComment: (id, text, author) => request('POST', `/albums/${id}/comments`, { text, author }),
   },
 
   // Media URLs — token appended so <img src> / <video src> work (no Authorization header on static loads)

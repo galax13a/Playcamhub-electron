@@ -34,6 +34,7 @@ export async function renderSettings(el) {
         ${starchoEnabled ? `<button class="sn-btn" data-sec="sec-categories">🏷 ${t('categories')}</button>` : ''}
         ${starchoEnabled ? `<button class="sn-btn" data-sec="sec-library">📦 ${t('lib_section')}</button>` : ''}
         <button class="sn-btn" data-sec="sec-plugins">🧩 Plugins</button>
+        <button class="sn-btn" data-sec="sec-ai">🤖 IA</button>
         <button class="sn-btn" data-sec="sec-plan">⭐ ${t('plan_section')}</button>
         <button class="sn-btn" data-sec="sec-about">ℹ ${t('about')}</button>
       </div>
@@ -340,6 +341,91 @@ export async function renderSettings(el) {
         </div>
       </div>
 
+      <!-- ── IA Providers ──────────────────────────────────── -->
+      <div class="settings-section" id="sec-ai">
+        <div class="settings-section-title">🤖 Inteligencia Artificial</div>
+        <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;line-height:1.6">
+          Configura las API keys de los proveedores para usar el editor IA en fotos.
+          Guarda los cambios con el botón al final.
+        </p>
+
+        <!-- OpenAI -->
+        <div style="background:var(--bg-3);border-radius:10px;padding:14px 16px;margin-bottom:12px;border:1px solid rgba(255,255,255,.07)">
+          <div style="font-weight:700;font-size:13px;margin-bottom:12px;display:flex;align-items:center;gap:8px">
+            🤖 OpenAI (DALL-E)
+            <span style="font-size:10px;padding:2px 7px;background:rgba(16,185,129,.15);color:#10b981;border-radius:4px">img2img</span>
+          </div>
+          <div class="form-group" style="margin-bottom:10px">
+            <label style="font-size:11px;font-weight:700;color:var(--text-muted)">API KEY</label>
+            <input class="form-control" id="ai-openai-key" type="password"
+                   value="${_safe(settings.ai_openai_key)}"
+                   placeholder="sk-proj-..." autocomplete="off">
+          </div>
+          <div class="form-group">
+            <label style="font-size:11px;font-weight:700;color:var(--text-muted)">MODELO</label>
+            <select class="form-control" id="ai-openai-model">
+              <option value="dall-e-2" ${(settings.ai_openai_model||'dall-e-2')==='dall-e-2'?'selected':''}>DALL-E 2 (edición de imagen)</option>
+              <option value="dall-e-3" ${(settings.ai_openai_model||'')==='dall-e-3'?'selected':''}>DALL-E 3 (generación)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Stability AI -->
+        <div style="background:var(--bg-3);border-radius:10px;padding:14px 16px;margin-bottom:12px;border:1px solid rgba(255,255,255,.07)">
+          <div style="font-weight:700;font-size:13px;margin-bottom:12px;display:flex;align-items:center;gap:8px">
+            🎨 Stability AI
+            <span style="font-size:10px;padding:2px 7px;background:rgba(99,102,241,.18);color:#818cf8;border-radius:4px">img2img</span>
+          </div>
+          <div class="form-group" style="margin-bottom:10px">
+            <label style="font-size:11px;font-weight:700;color:var(--text-muted)">API KEY</label>
+            <input class="form-control" id="ai-stability-key" type="password"
+                   value="${_safe(settings.ai_stability_key)}"
+                   placeholder="sk-..." autocomplete="off">
+          </div>
+          <div class="form-group">
+            <label style="font-size:11px;font-weight:700;color:var(--text-muted)">MODELO</label>
+            <select class="form-control" id="ai-stability-model">
+              <option value="stable-diffusion-xl-1024-v1-0" ${(settings.ai_stability_model||'stable-diffusion-xl-1024-v1-0')==='stable-diffusion-xl-1024-v1-0'?'selected':''}>SDXL 1.0 (1024px)</option>
+              <option value="stable-diffusion-v1-6" ${(settings.ai_stability_model||'')==='stable-diffusion-v1-6'?'selected':''}>SD 1.6 (512px, más rápido)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Replicate -->
+        <div style="background:var(--bg-3);border-radius:10px;padding:14px 16px;margin-bottom:16px;border:1px solid rgba(255,255,255,.07)">
+          <div style="font-weight:700;font-size:13px;margin-bottom:12px;display:flex;align-items:center;gap:8px">
+            ⚡ Replicate (Flux)
+            <span style="font-size:10px;padding:2px 7px;background:rgba(245,158,11,.15);color:#fbbf24;border-radius:4px">img2img</span>
+          </div>
+          <div class="form-group" style="margin-bottom:10px">
+            <label style="font-size:11px;font-weight:700;color:var(--text-muted)">API KEY</label>
+            <input class="form-control" id="ai-replicate-key" type="password"
+                   value="${_safe(settings.ai_replicate_key)}"
+                   placeholder="r8_..." autocomplete="off">
+          </div>
+          <div class="form-group">
+            <label style="font-size:11px;font-weight:700;color:var(--text-muted)">MODELO (version ID)</label>
+            <select class="form-control" id="ai-replicate-model">
+              <option value="black-forest-labs/flux-dev" ${(settings.ai_replicate_model||'black-forest-labs/flux-dev')==='black-forest-labs/flux-dev'?'selected':''}>Flux Dev</option>
+              <option value="black-forest-labs/flux-schnell" ${(settings.ai_replicate_model||'')==='black-forest-labs/flux-schnell'?'selected':''}>Flux Schnell (rápido)</option>
+              <option value="stability-ai/sdxl" ${(settings.ai_replicate_model||'')==='stability-ai/sdxl'?'selected':''}>SDXL via Replicate</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:12px">
+          <div class="form-group" style="flex:1">
+            <label style="font-size:11px;font-weight:700;color:var(--text-muted)">PROVEEDOR POR DEFECTO</label>
+            <select class="form-control" id="ai-default-provider">
+              <option value="openai"    ${(settings.ai_provider||'openai')==='openai'?'selected':''}>OpenAI</option>
+              <option value="stability" ${(settings.ai_provider||'')==='stability'?'selected':''}>Stability AI</option>
+              <option value="replicate" ${(settings.ai_provider||'')==='replicate'?'selected':''}>Replicate</option>
+            </select>
+          </div>
+          <button class="btn btn-primary btn-sm" id="btn-save-ai" style="margin-top:12px;white-space:nowrap">💾 Guardar IA</button>
+        </div>
+      </div>
+
       <!-- ── About ──────────────────────────────────────────── -->
       <div class="settings-section" id="sec-about">
         <div class="settings-section-title">ℹ ${t('about')}</div>
@@ -381,6 +467,7 @@ export async function renderSettings(el) {
 
   _bindSectionNav(el);
   _bindPlugins(el);
+  _bindAI(el);
   _bindProfile(el, merged);
   _bindAppearance(el);
   if (starchoEnabled) {
@@ -393,6 +480,33 @@ export async function renderSettings(el) {
   _bindActivation(el, settings);
   _bindReset(el);
   _loadLibraryStats(el);
+}
+
+// ── AI providers ─────────────────────────────────────────────────────────────
+
+function _bindAI(el) {
+  el.querySelector('#btn-save-ai')?.addEventListener('click', async () => {
+    const btn = el.querySelector('#btn-save-ai');
+    btn.disabled = true;
+    btn.textContent = '⏳…';
+    try {
+      await API.settings.setMany({
+        ai_provider:        el.querySelector('#ai-default-provider')?.value  || 'openai',
+        ai_openai_key:      el.querySelector('#ai-openai-key')?.value        || '',
+        ai_openai_model:    el.querySelector('#ai-openai-model')?.value      || 'dall-e-2',
+        ai_stability_key:   el.querySelector('#ai-stability-key')?.value     || '',
+        ai_stability_model: el.querySelector('#ai-stability-model')?.value   || 'stable-diffusion-xl-1024-v1-0',
+        ai_replicate_key:   el.querySelector('#ai-replicate-key')?.value     || '',
+        ai_replicate_model: el.querySelector('#ai-replicate-model')?.value   || 'black-forest-labs/flux-dev',
+      });
+      showToast('✅ Configuración IA guardada');
+    } catch (err) {
+      showToast('Error guardando: ' + err.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '💾 Guardar IA';
+    }
+  });
 }
 
 // ── Section nav ──────────────────────────────────────────────────────────────

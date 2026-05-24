@@ -65,6 +65,37 @@ function migrate(db) {
   safe("ALTER TABLE media ADD COLUMN compressed_format TEXT DEFAULT 'webp'");
   safe("ALTER TABLE media ADD COLUMN thumbnail_path TEXT");
 
+  // MediaHub v2 — media enrichment
+  safe("ALTER TABLE media ADD COLUMN title TEXT DEFAULT ''");
+  safe("ALTER TABLE media ADD COLUMN description TEXT DEFAULT ''");
+  safe("ALTER TABLE media ADD COLUMN likes INTEGER DEFAULT 0");
+  safe("ALTER TABLE media ADD COLUMN rating REAL DEFAULT 0");
+  safe("ALTER TABLE media ADD COLUMN rating_count INTEGER DEFAULT 0");
+
+  // MediaHub v2 — album metadata
+  safe("ALTER TABLE albums ADD COLUMN tag TEXT DEFAULT 'free'");
+  safe("ALTER TABLE albums ADD COLUMN color TEXT DEFAULT '#1DB954'");
+  safe("ALTER TABLE albums ADD COLUMN importance INTEGER DEFAULT 1");
+  safe("ALTER TABLE albums ADD COLUMN objective TEXT DEFAULT ''");
+  safe("ALTER TABLE albums ADD COLUMN price REAL DEFAULT 0");
+  safe("ALTER TABLE albums ADD COLUMN currency TEXT DEFAULT 'usd'");
+  safe("ALTER TABLE albums ADD COLUMN payment_method TEXT DEFAULT ''");
+  safe("ALTER TABLE albums ADD COLUMN view_count INTEGER DEFAULT 0");
+
+  // MediaHub v3 — comments + album favorites
+  safe(`
+    CREATE TABLE IF NOT EXISTS comments (
+      id          INTEGER PRIMARY KEY AUTOINCREMENT,
+      entity_type TEXT NOT NULL CHECK(entity_type IN ('media','album')),
+      entity_id   INTEGER NOT NULL,
+      text        TEXT NOT NULL,
+      author      TEXT DEFAULT 'Usuario',
+      created_at  DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+  safe('CREATE INDEX IF NOT EXISTS idx_comments_entity ON comments(entity_type, entity_id)');
+  safe("ALTER TABLE albums ADD COLUMN is_favorite INTEGER DEFAULT 0");
+
   // Seed default album
   db.prepare(`INSERT OR IGNORE INTO albums (id, name, description) VALUES (1, 'Uncategorized', 'Media without album')`).run();
 }

@@ -163,6 +163,19 @@ function configPage({ settings = {}, envContent = '', flash, csrfToken = '' } = 
           </div>
         </div>
 
+        <!-- Session TTL -->
+        <div class="fgroup" style="margin-bottom:20px">
+          <label class="flabel" for="s-session-ttl">Duración de sesión (días)</label>
+          <input class="finput" type="number" id="s-session-ttl" name="session_ttl_days"
+                 min="1" max="365" step="1"
+                 value="${esc(cur('session_ttl_days') || '30')}"
+                 style="max-width:120px">
+          <div class="fhint">
+            Cuántos días dura la sesión del usuario sin necesidad de volver a hacer login.
+            Rango: 1–365 días. El cambio se aplica en el <strong>próximo inicio de sesión</strong>.
+          </div>
+        </div>
+
         <button class="btn btn-primary" type="submit">💾 Guardar ajustes</button>
       </form>
     </div>

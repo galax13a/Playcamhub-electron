@@ -38,15 +38,16 @@ class PluginManager {
     this._ensureTable(db);
 
     for (const { id, manifest, dir } of this.discover()) {
-      // Register in DB on first sight (default: enabled)
+      // Register in DB on first sight — respect manifest's enabled field as default
       const row = db.prepare('SELECT enabled FROM plugins WHERE id = ?').get(id);
       if (!row) {
+        const defaultEnabled = manifest.enabled !== false ? 1 : 0;
         db.prepare(
-          'INSERT OR IGNORE INTO plugins (id, name, version, enabled) VALUES (?, ?, ?, 1)'
-        ).run(id, manifest.name || id, manifest.version || '1.0.0');
+          'INSERT OR IGNORE INTO plugins (id, name, version, enabled) VALUES (?, ?, ?, ?)'
+        ).run(id, manifest.name || id, manifest.version || '1.0.0', defaultEnabled);
       }
 
-      const enabled = row ? row.enabled === 1 : true;
+      const enabled = row ? row.enabled === 1 : manifest.enabled !== false;
       if (!enabled) {
         log.info(`[plugins] "${id}" is disabled — skip`);
         continue;
