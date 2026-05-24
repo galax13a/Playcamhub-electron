@@ -69,7 +69,7 @@ export class Paginator {
     this._loading = true;
     this._listEl.innerHTML = '<div class="pgr-loading">Cargando…</div>';
     try {
-      const result = await this._fetchFn({ page: this._page, perPage: this._perPage, ...this._params });
+      const result = await this._fetchFn({ page: this._page, per_page: this._perPage, ...this._params });
       this._total  = result.total ?? 0;
       // Clamp page to valid range after deletion, etc.
       const maxPage = Math.max(1, Math.ceil(this._total / this._perPage));

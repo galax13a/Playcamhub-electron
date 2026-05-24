@@ -15,8 +15,8 @@ const CORE_ITEMS = [
   { icon: '⚙️', label: 'Ajustes', view: 'settings', always: true },
 ];
 
-/** @param {{ plugins:Array, flash?:object }} data */
-function menuPage({ plugins, flash } = {}) {
+/** @param {{ plugins:Array, flash?:object, csrfToken?:string }} data */
+function menuPage({ plugins, flash, csrfToken = '' } = {}) {
 
   // Core nav — always visible, no toggle
   const coreRows = CORE_ITEMS.map(n => `
@@ -124,7 +124,7 @@ function menuPage({ plugins, flash } = {}) {
       }
     </script>`;
 
-  return layout({ title: 'Menú & Plugins', content, active: 'menu', flash });
+  return layout({ title: 'Menú & Plugins', content, active: 'menu', flash, csrfToken });
 }
 
 module.exports = { menuPage };

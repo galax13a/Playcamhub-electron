@@ -2,7 +2,7 @@
 
 > Starkit para construir apps de escritorio con Electron + Express + SQLite + vanilla JS.
 
-StarchoElectron es una plantilla de arranque ("starkit") lista para producción. Incluye autenticación local, temas visuales, i18n (EN/ES/PT), sistema de plugins con dashboard widget API, sidebar colapsable y responsive, mini-player IPC, manejador de errores global, validación con Zod, perfil de usuario con avatar, y una app de música de ejemplo completa. Clona, crea tu plugin y lanza.
+StarchoElectron es una plantilla de arranque ("starkit") lista para producción. Incluye autenticación local con sesiones persistentes de 7 días, temas visuales, i18n (EN/ES/PT), sistema de plugins con dashboard widget API, sidebar colapsable y responsive, mini-player IPC, manejador de errores global, validación con Zod, perfil de usuario con avatar, panel de administración web y una app de música de ejemplo completa. Clona, crea tu plugin y lanza.
 
 ---
 
@@ -12,10 +12,10 @@ StarchoElectron es una plantilla de arranque ("starkit") lista para producción.
 |------|-------------------|
 | **Electron** | Ventana frameless, título bar custom con nombre + versión, controles (min/max/close), single instance lock, arranque maximizado |
 | **Seguridad** | `IS_PROD`/`IS_DEV` automático, sandbox, devTools off, Chromium flags, CSP en renderer |
-| **Backend local** | Express en `localhost:PORT`, auto-incremento de puerto, CORS, rutas REST |
+| **Backend local** | Express en `localhost:PORT`, auto-incremento de puerto, CORS, rutas REST, 404/500 handlers con logging |
 | **Base de datos** | SQLite (better-sqlite3), WAL mode, migraciones idempotentes, settings de plugins en DB |
 | **Frontend** | ES Modules sin bundler, router hash, store reactivo, EventBus, i18n (EN/ES/PT) reactivo |
-| **Autenticación** | Login/registro local, "recordar sesión" con auto-login, hash SHA-256, recuerda última ruta |
+| **Autenticación** | Login/registro local, sesiones por token (7 días, SQLite), sin contraseñas en localStorage, validación al arrancar |
 | **Settings** | Todos los ajustes guardados en SQLite — cero localStorage para settings |
 | **Temas UI** | 12 temas CSS (`data-theme`): dark, light, matrix, winamp, rickmorty, kick, pink, red, military, arcade, neon, ocean |
 | **Temas login** | 8 pantallas de login intercambiables: nebula, split, glass, kick, arcade, galax, cyber, lux |
@@ -23,10 +23,12 @@ StarchoElectron es una plantilla de arranque ("starkit") lista para producción.
 | **Dashboard** | Home screen con widgets por zona (header/content), estadísticas CPU/RAM, acciones rápidas |
 | **Sidebar** | Colapsable (icon-only), responsive, labels en el idioma activo, persistido en localStorage |
 | **Perfil** | Modal de edición de avatar + datos de perfil desde cualquier punto de la app |
-| **Error manager** | `window.onerror` + `unhandledrejection` → log en consola y archivo `errors.log` (viewer en Settings, solo dev) |
-| **Validación** | Zod v3 en todos los endpoints backend — errores con marcado de campo en el frontend |
+| **Error manager** | `window.onerror` + `unhandledrejection` → log en consola y archivo via electron-log |
+| **Dev Log** | Viewer del log de errores en el panel admin (`/admin/logs`) — visible siempre para el administrador |
+| **Validación** | Zod en todos los endpoints backend — errores con marcado de campo en el frontend |
 | **Mini player** | Ventana always-on-top con 3 tamaños, IPC bidireccional, visualizer de audio y sync de tema |
 | **Auto-updater** | electron-updater apuntando a GitHub Releases (solo en producción) |
+| **Panel admin** | `/admin` SSR con login propio, dashboard, plugins, config, usuarios, dev log — CSRF + rate limiting |
 | **Empaquetado** | electron-builder — Windows NSIS, macOS DMG/ZIP, Linux AppImage/deb |
 
 ---
@@ -57,10 +59,56 @@ npm run build         # Todas las plataformas
 | Comportamiento | Desarrollo (`npm run dev`) | Producción (app empaquetada) |
 |----------------|---------------------------|------------------------------|
 | DevTools | Disponible (F12, o `DEVTOOLS=true` en `.env`) | Completamente bloqueado |
-| Error log viewer | Visible en Settings → Dev Log | Oculto |
+| Dev Log | Visible en `/admin/logs` | Visible en `/admin/logs` |
 | Sandbox renderer | Desactivado | Activado |
 | `remote-debugging-port` | Abierto | Forzado a `0` |
 | Chromium extensions | Habilitadas | Deshabilitadas |
+
+---
+
+## Autenticación y Sesiones
+
+### Flujo de login
+
+El sistema usa **tokens de sesión SQLite** — nunca se guarda la contraseña en localStorage.
+
+```
+1. Usuario introduce credenciales → POST /api/auth/login
+2. Backend verifica hash SHA-256, genera token aleatorio de 32 bytes
+3. Token se guarda en tabla app_sessions (SQLite) con expires_at = now + 7 días
+4. Frontend guarda { token, username, expiresAt } en localStorage como auth_session
+5. En el próximo arranque → GET /api/auth/validate?token=xxx
+6. Si token válido → auto-login silencioso
+7. Si token expirado/inválido → se borra y aparece formulario de login
+```
+
+### "Recordar sesión"
+
+- **Activado** → el token se persiste en localStorage por 7 días, el usuario entra automáticamente en los próximos arranques.
+- **Desactivado** → el token no se guarda; al cerrar y reabrir la app se pide login de nuevo.
+
+### Tabla `app_sessions`
+
+```sql
+CREATE TABLE IF NOT EXISTS app_sessions (
+  token      TEXT PRIMARY KEY,       -- 64 hex chars (32 bytes aleatorios)
+  username   TEXT NOT NULL,
+  expires_at INTEGER NOT NULL,       -- Unix timestamp en ms
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+Los tokens expirados se limpian automáticamente en cada nuevo login (limpieza oportunista).
+
+### Endpoints de auth
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `POST` | `/api/auth/login` | Valida credenciales, devuelve `{ ok, username, token, expiresAt }` |
+| `GET`  | `/api/auth/validate` | Valida token de sesión, devuelve `{ ok, username }` o 401 |
+| `POST` | `/api/auth/register` | Crea nuevo usuario |
+| `GET`  | `/api/auth/profile` | Lee perfil de usuario |
+| `PUT`  | `/api/auth/profile` | Actualiza perfil |
 
 ---
 
@@ -157,23 +205,6 @@ navItems: [
 
 El Sidebar llama `t(n.labelKey)` al renderizar, así el label cambia de idioma automáticamente sin recargar el plugin. El campo `label` actúa de fallback si la clave no existe en el diccionario.
 
-**Claves de nav registradas:**
-
-| Clave | EN | ES | PT |
-|-------|----|----|----|
-| `nav_home` | Home | Inicio | Início |
-| `nav_library` | Library | Biblioteca | Biblioteca |
-| `nav_youtube` | YouTube | YouTube | YouTube |
-| `nav_import` | Import | Importar | Importar |
-| `nav_history` | History | Historial | Histórico |
-| `nav_settings` | Settings | Configuración | Configurações |
-| `nav_notes` | Notes | Notas | Notas |
-| `nav_tasks` | Tasks | Tareas | Tarefas |
-| `nav_contacts` | Contacts | Contactos | Contatos |
-| `nav_modules` | Modules | Módulos | Módulos |
-| `sidebar_collapse` | Collapse sidebar | Ocultar menú | Ocultar menu |
-| `sidebar_expand` | Expand sidebar | Mostrar menú | Mostrar menu |
-
 ---
 
 ## Sidebar — Colapsable y Responsive
@@ -187,30 +218,6 @@ Expandido:   [Logo + texto]  [‹]     Nav items con icono + texto
 Colapsado:   [Logo]         [›]     Solo iconos, sin texto ni separadores de sección
 ```
 
-**Cómo funciona internamente:**
-
-```js
-// Sidebar.js
-_collapsed = localStorage.getItem('sb_collapsed') === '1';
-
-function _toggleCollapse(el) {
-  _collapsed = !_collapsed;
-  localStorage.setItem('sb_collapsed', _collapsed ? '1' : '0');
-  el.classList.toggle('sidebar--collapsed', _collapsed);
-  // Solo actualiza el botón — no necesita rebuild completo
-}
-```
-
-La clase `.sidebar--collapsed` en `#sidebar` controla todo lo visual via CSS:
-
-```css
-/* main.css */
-.sidebar--collapsed           { width: 56px !important; }
-.sidebar--collapsed .nav-label,
-.sidebar--collapsed .logo-text-group { display: none; }
-.sidebar--collapsed .nav-item { justify-content: center; }
-```
-
 ### Responsive layout
 
 | Ancho de ventana | Comportamiento |
@@ -219,32 +226,11 @@ La clase `.sidebar--collapsed` en `#sidebar` controla todo lo visual via CSS:
 | 600 – 900 px | Sidebar se fuerza a modo icon-only (56 px), botón de colapso oculto |
 | ≤ 600 px | Sidebar se convierte en overlay deslizable; hamburger `☰` en el title bar |
 
-**Mobile overlay** (≤ 600 px):
-
-```
-Title bar: [☰ Hamburger] [Logo] [v1.0.0] [min][max][x]
-
-Sidebar: position:fixed, transform:translateX(-100%)   ← oculto por defecto
-         + clase .mobile-open → transform:translateX(0) ← visible al hacer tap en ☰
-         + backdrop #sidebar-overlay con opacity fade
-```
-
-El sidebar se cierra automáticamente al tocar un nav item o el backdrop.
-
 ---
 
 ## Barra de título con versión
 
-El campo central de la title bar muestra `AppName vX.Y.Z`. Los valores se leen de `APP_NAME` y `APP_VERSION` en `.env` vía el backend y se exponen en el config endpoint:
-
-```js
-// app.js — después de store.loadConfig()
-const _cfg = store.state.appConfig;
-_tb.textContent = `${_cfg.appName} v${_cfg.appVersion}`;
-// → "StarchoElectron v1.0.0"
-```
-
-Para cambiar la versión edita `.env`:
+El campo central de la title bar muestra `AppName vX.Y.Z`. Los valores se leen de `APP_NAME` y `APP_VERSION` en `.env`:
 
 ```env
 APP_NAME=Mi App
@@ -264,6 +250,7 @@ plugins/
       routes/
         index.js     # Rutas Express (GET/POST/etc.)
       schemas/       # Esquemas Zod de validación
+      migrations.js  # CREATE TABLE IF NOT EXISTS idempotente
     frontend/
       index.js       # Registro frontend (navItems, views, dashboardWidgets)
       styles/
@@ -287,7 +274,7 @@ export default {
     const link = document.createElement('link');
     link.id   = 'mi-plugin-css';
     link.rel  = 'stylesheet';
-    link.href = new URL('./styles/mi-plugin.css', import.meta.url).href;
+    link.href = '../../plugins/mi-plugin/frontend/styles/mi-plugin.css';
     document.head.appendChild(link);
   },
 
@@ -312,11 +299,28 @@ export default {
       priority: 50,          // mayor = se muestra primero en la zona
       title:    '🔌 Mi Plugin',
       async render(el) {
-        el.innerHTML = `<div>Hola desde mi plugin</div>`;
+        // IMPORTANTE: API paginada devuelve { items, total } — no un array directo
+        const result = await API.miPlugin.list();
+        const items  = result.items ?? result;
+        el.innerHTML = `<div>${items.length} registros</div>`;
       },
     },
   ],
 };
+```
+
+### Widgets del dashboard — API paginada
+
+Cuando el endpoint devuelve `{ items: [...], total: N, page: N, perPage: N }`, el widget **debe** extraer el array:
+
+```js
+// Correcto
+const result = await API.contacts.list();
+const contacts = result.items ?? result;
+
+// Incorrecto — .filter() sobre el objeto lanzaría TypeError
+const contacts = await API.contacts.list();
+contacts.filter(c => c.active);  // ❌
 ```
 
 ### Ciclo de vida de un plugin
@@ -331,31 +335,16 @@ boot()
               └── _views[key] = fn       → el router puede navegar a esa vista
               └── _dashboardWidgets.push → el Dashboard renderiza el widget
         └── EventBus.emit('plugins:ready')
-              └── Sidebar._rebuild()     → usa t(labelKey) para traducir labels
-              └── Dashboard.render()     → llama PluginRegistry.renderDashboardZone()
 ```
 
 ### Settings de plugin desde la base de datos
 
-Cada plugin tiene su espacio de configuración en la tabla `settings` con el prefijo `plugin_{id}_`:
-
 ```js
 // Leer configuración de un plugin
 const cfg = await API.plugins.getSettings('mi-plugin');
-// cfg = { sort_by: 'date', items_per_page: '20' }
-
-// Guardar una clave
-await API.plugins.setSetting('mi-plugin', 'sort_by', 'title');
 
 // Guardar múltiples claves a la vez
 await API.plugins.setSettings('mi-plugin', { sort_by: 'title', items_per_page: '50' });
-```
-
-**Backend:**
-
-```
-GET  /api/plugins/:id/settings  → lee plugin_{id}_* de la tabla settings, retorna sin prefijo
-POST /api/plugins/:id/settings  → acepta { key, value } o { settings: { key: value, ... } }
 ```
 
 ---
@@ -366,270 +355,71 @@ El Dashboard (`home`) tiene zonas donde los plugins contribuyen contenido:
 
 | Zona | Descripción | Quién la usa |
 |------|-------------|--------------|
-| `header` | Franja ancha superior | starcho-now-playing (transport controls) |
-| `content` | Grid de tarjetas | starcho (biblioteca), notes, tasks, contacts |
+| `header` | Franja ancha superior | starcho-now-playing |
+| `content` | Grid de tarjetas | starcho, notes, tasks, contacts |
 
 Además muestra:
 - **CPU y RAM** en tiempo real — muestreadas cada 3 s via IPC `system:stats`
+- **Disco usado** — solo cuando el plugin `starcho` está activo (evita 404 cuando está desactivado)
 - **Acciones rápidas** — un botón por cada nav item registrado por todos los plugins activos
 - **Botón de perfil** — abre el modal de edición directamente
-
-### Renderizado de una zona
-
-```js
-// Dashboard.js
-await PluginRegistry.renderDashboardZone('content', container);
-
-// PluginRegistry — filtra por zona, ordena por priority DESC, renderiza en paralelo
-for (const w of widgets) {
-  const wrapper = createElement('.dash-widget');
-  wrapper.innerHTML = '<loading>';
-  container.appendChild(wrapper);
-  await w.render(wrapper.querySelector('.dash-widget-body'));
-}
-```
-
-### Agregar un widget desde un plugin
-
-```js
-dashboardWidgets: [
-  {
-    id:       'mi-widget',
-    zone:     'content',
-    priority: 50,          // 100 = primero, 0 = último
-    title:    '🔌 Mi widget',
-    async render(el) {
-      const data = await API.miPlugin.getData();
-      el.innerHTML = `<div>${data.count} items</div>`;
-    },
-  },
-],
-```
 
 ---
 
 ## Librería de componentes compartidos
 
-El starkit incluye dos módulos de utilidades que **eliminan la duplicación de código** entre plugins y componentes del renderer. Cualquier plugin puede importarlos usando rutas relativas desde su carpeta.
-
 ### `src/renderer/utils/html.js` — Constructores de HTML
-
-Funciones puras que devuelven strings HTML. Cero manipulación del DOM.
 
 | Función | Descripción |
 |---------|-------------|
-| `esc(v)` | Escapa un valor para inserción segura como texto HTML (`&`, `<`, `>`, `"`) |
+| `esc(v)` | Escapa un valor para inserción segura como texto HTML |
 | `attr(v)` | Escapa un valor para uso seguro dentro de un atributo HTML |
-| `statRow(icon, label, value)` | Tarjeta de stat para widgets del dashboard (bg-3, icono + valor grande + label) |
-| `badge(label, color)` | Badge inline coloreado (ej: estado de contacto) |
-| `grid(cols, gap, ...children)` | Contenedor CSS grid — agrupa children en columnas iguales |
-| `formGroup({ label, id, type, placeholder, value, ... })` | Bloque `.form-group > label + .form-control` completo |
-
-**Uso desde un plugin:**
-
-```js
-import { esc, formGroup, grid, statRow, badge } from '../../../src/renderer/utils/html.js';
-
-// En un widget del dashboard
-el.innerHTML = grid(2, '8px',
-  statRow('📝', 'Total', notes.length),
-  statRow('📅', 'Con fecha', withDate),
-);
-
-// En un modal de formulario
-content: `
-  ${formGroup({ label: 'Nombre *', id: 'cf-name', dataField: 'name', value: esc(c.name) })}
-  ${grid(2, '12px',
-    formGroup({ label: 'Email', id: 'cf-email', type: 'email', value: esc(c.email) }),
-    formGroup({ label: 'Estado', id: 'cf-status', type: 'select', options: statusOpts }),
-  )}
-  ${formGroup({ label: 'Notas', id: 'cf-notes', type: 'textarea', rows: 3, value: esc(c.notes) })}`,
-```
-
-**Tipos soportados por `formGroup`:** `text` | `email` | `tel` | `date` | `textarea` | `select` | `hidden`
-
-El parámetro `dataField` controla el atributo `data-field` (usado por `markFieldErrors()`). Si se omite, toma el valor de `id`.
-
----
+| `statRow(icon, label, value)` | Tarjeta de stat para widgets del dashboard |
+| `badge(label, color)` | Badge inline coloreado |
+| `grid(cols, gap, ...children)` | Contenedor CSS grid |
+| `formGroup({ label, id, type, ... })` | Bloque `.form-group > label + .form-control` completo |
 
 ### `src/renderer/components/ui.js` — Bloques de UI
 
-Componentes de nivel alto que devuelven HTML strings o vinculan eventos DOM.
+| Función | Descripción |
+|---------|-------------|
+| `emptyState({ icon, title, desc })` | Estado vacío completo |
+| `loading(height)` | Spinner centrado |
+| `viewHeader(title, right, cls)` | Cabecera de vista con botones |
+| `filterBar(items, activeVal, opts)` | Strip de botones de filtro |
+| `wireFilters(el, btnSel, dataAttr, onChange)` | Vincula clicks del filterBar |
+| `recentList(items, renderItem)` | Lista de ítems recientes |
+| `alertBanner(text, opts)` | Banner de alerta coloreado |
+
+### `src/renderer/utils/formatters.js`
 
 | Función | Descripción |
 |---------|-------------|
-| `emptyState({ icon, title, desc, cls })` | Estado vacío completo: icono grande + h3 + párrafo |
-| `loading(height)` | Spinner centrado (usa `.spinner` de main.css) |
-| `viewHeader(title, right, cls)` | Cabecera de vista: título izquierda + botones/buscador derecha |
-| `filterBar(items, activeVal, opts)` | Strip de botones de filtro con estado `.active` |
-| `wireFilters(el, btnSel, dataAttr, onChange)` | Vincula los clicks del filterBar, llama `onChange(value)` |
-| `recentList(items, renderItem)` | Lista de ítems recientes separada por borde superior |
-| `alertBanner(text, { bg, border, color })` | Banner de alerta/advertencia coloreado |
-
-**Uso desde un plugin:**
-
-```js
-import { viewHeader, filterBar, wireFilters, emptyState, alertBanner }
-  from '../../../src/renderer/components/ui.js';
-
-// Cabecera de vista
-el.innerHTML = `<div class="ct-container">
-  ${viewHeader('👥 Contactos',
-    `<input id="ct-search" class="form-control" placeholder="🔍 Buscar…">
-     <button id="ct-new-btn">+ Nuevo</button>`,
-    'ct-header'
-  )}
-  ${filterBar(FILTERS, _activeStatus, { dataAttr: 'status', btnClass: 'ct-filter', wrapClass: 'ct-filters' })}
-  <div class="ct-grid" id="ct-grid"></div>
-</div>`;
-
-// Vincular los filtros
-wireFilters(el, '.ct-filter', 'status', val => {
-  _activeStatus = val;
-  _refresh();
-});
-
-// Estado vacío
-container.innerHTML = emptyState({ icon: '👥', title: 'Sin contactos', desc: 'Agrega el primero.' });
-
-// Banner de tareas vencidas
-el.innerHTML += overdue > 0 ? alertBanner(`⚠ Tienes ${overdue} tareas vencidas`) : '';
-```
-
----
-
-### `src/renderer/utils/formatters.js` — Formatters compartidos
-
-| Función | Descripción |
-|---------|-------------|
-| `formatDuration(seconds)` | `m:ss` — para Player y Library |
-| `formatCount(n)` | `1.2K`, `3.4M` — para conteos grandes |
-| `timeAgo(dateStr)` | `"2h ago"`, `"3d ago"` — tiempo relativo |
-| `truncate(str, len)` | Corta y agrega `…` si supera el largo |
-| `sanitizeHTML(str)` | Sanitiza via `textContent` |
 | `greeting()` | `"Buenos días"` / `"Buenas tardes"` / `"Buenas noches"` |
-| `dateStr()` | Fecha larga en español (`"viernes, 22 de mayo de 2026"`) |
-| `fmtBytes(bytes)` | `"1.2 MB"`, `"3.4 GB"` — para tamaños de archivo |
+| `dateStr()` | Fecha larga en español |
+| `fmtBytes(bytes)` | `"1.2 MB"`, `"3.4 GB"` |
+| `formatDuration(s)` | `m:ss` |
+| `timeAgo(dateStr)` | `"2h ago"`, `"3d ago"` |
 
 ---
 
-## Perfil de usuario
+## Paginación
 
-El perfil se edita mediante un **popup modal** accesible desde:
-- El avatar/nombre en la barra lateral (clic en el área del usuario)
-- El botón 👤 en el Dashboard
-
-Permite editar: avatar (crop 128×128), nombre completo, apodo, WhatsApp.
-Los datos se guardan en la tabla `users` y se reflejan inmediatamente en el store y el sidebar.
+Todos los endpoints de plugins devuelven `{ items, total, page, perPage }`. El frontend usa `Paginator.js`:
 
 ```js
-import { openProfileModal } from './components/Modal.js';
-openProfileModal(); // abre desde cualquier lugar del renderer
+import { Paginator } from '../../../../src/renderer/utils/Paginator.js';
+
+const pager = new Paginator({
+  container: el.querySelector('#list'),
+  fetchFn:   (params) => API.tasks.list(params),  // params incluye { page, per_page }
+  renderFn:  (items)  => items.map(renderRow).join(''),
+  perPage:   12,
+});
+pager.load({ username: store.state.loggedUser?.username });
 ```
 
----
-
-## Manejador de Errores
-
-```js
-// src/renderer/utils/errorHandler.js
-import { logError, logWarn, initErrorHandler } from './utils/errorHandler.js';
-
-// Inicializado automáticamente en boot (app.js)
-initErrorHandler(); // hookea window.onerror + unhandledrejection
-
-// Uso manual en cualquier catch
-try {
-  await algoPeligroso();
-} catch (err) {
-  logError(err); // → consola + errors.log en userData
-}
-```
-
-El log se guarda en `{userData}/errors.log` y se puede ver/limpiar desde **Settings → Dev Log** (solo en modo desarrollo).
-
----
-
-## API REST
-
-El backend Express expone los siguientes endpoints bajo `/api/`:
-
-| Método | Ruta | Descripción |
-|--------|------|-------------|
-| GET | `/songs` | Lista canciones con filtros |
-| GET | `/songs/stats` | Total audio/video, bytes en disco |
-| GET | `/playlists` | Lista playlists |
-| GET | `/plugins` | Lista plugins con estado enabled |
-| PUT | `/plugins/:id` | Activar/desactivar plugin |
-| GET | `/plugins/:id/settings` | Leer configuración de plugin desde DB |
-| POST | `/plugins/:id/settings` | Guardar configuración de plugin en DB |
-| GET | `/settings` | Leer todos los ajustes |
-| POST | `/settings` | Guardar ajustes en bulk |
-| POST | `/download-queue` | Agregar URL a la cola de descarga |
-| GET | `/auth/profile` | Obtener perfil de usuario |
-| PUT | `/auth/profile` | Actualizar perfil de usuario |
-
----
-
-## Variables de entorno (`.env`)
-
-```env
-APP_NAME=Mi App           # Aparece en sidebar y title bar
-APP_SLOGAN=Descripción    # Sub-texto del logo en sidebar
-APP_VERSION=1.0.0         # Aparece en title bar como "Mi App v1.0.0"
-LOGO_TEXT=Mi App
-
-DEVTOOLS=false     # true → abre DevTools al arrancar (solo dev)
-NODE_ENV=development
-```
-
----
-
-## Almacenamiento en producción
-
-| Sistema | Ubicación |
-|---------|-----------|
-| Base de datos SQLite | `%APPDATA%/{appName}/{appName}.db` (Windows) |
-| Error log | `%APPDATA%/{appName}/errors.log` |
-| Media descargada | `%APPDATA%/{appName}/music/` |
-| Thumbnails | `%APPDATA%/{appName}/thumbnails/` |
-
----
-
-## Arquitectura del renderer
-
-```
-src/renderer/
-  app.js              ← Boot, wiring, versión en title bar, hamburger mobile
-  router.js           ← Hash router, mapa view-key → elemento DOM
-  store.js            ← Estado global reactivo (setState → EventBus.emit)
-  core/
-    PluginRegistry.js ← Carga plugins, colecciona navItems/views/widgets
-  components/
-    Sidebar.js        ← Nav colapsable, i18n via t(labelKey), EventBus listener
-    Dashboard.js      ← Zonas header/content, system stats, quick actions
-    Player.js         ← Barra de reproducción, IPC con mini-player
-    Modal.js          ← Modales genéricos + openProfileModal()
-    Settings.js       ← Tabs de configuración, dev log, plugin settings
-    ui.js             ← Bloques de UI reutilizables: emptyState, viewHeader, filterBar, wireFilters, recentList, alertBanner, loading
-  utils/
-    api.js            ← Cliente HTTP hacia Express backend
-    i18n.js           ← Diccionario EN/ES/PT, t(key), setLang(), THEMES, LANGUAGES
-    eventBus.js       ← Pub/sub liviano (on, off, emit)
-    errorHandler.js   ← initErrorHandler, logError, logWarn
-    html.js           ← Constructores HTML puros: esc, attr, statRow, badge, grid, formGroup
-    formatters.js     ← greeting, dateStr, fmtBytes, timeAgo, formatDuration, truncate
-```
-
----
-
-## Requisitos
-
-- Node.js 18+
-- npm 9+
-- Python 3 + Build Tools (para `better-sqlite3`)
-- yt-dlp en PATH (para descarga de YouTube)
-- ffmpeg en PATH (para conversión de audio/video)
+El `fetchFn` recibe `{ page, per_page, ...extraParams }` y debe devolver `{ items, total }`.
 
 ---
 
@@ -650,53 +440,39 @@ Las credenciales se definen en `src/backend/admin/sessions.js`. Son independient
 
 | Ruta | Descripción |
 |------|-------------|
-| `/admin/dashboard` | Vista general: conteo de plugins/usuarios/ajustes, env vars, accesos rápidos |
+| `/admin/dashboard` | Vista general: conteo de plugins/usuarios/ajustes, env vars |
 | `/admin/menu` | Activar / desactivar plugins con toggle (requiere reinicio) |
-| `/admin/config` | Ajustes rápidos con `<select>`, editor de `.env`, CRUD completo de todos los ajustes en DB |
-| `/admin/users` | Lista paginada (10/página), búsqueda, editar usuario, eliminar, crear, resetear contraseña |
+| `/admin/config` | Ajustes rápidos, editor de `.env`, CRUD completo de settings en DB |
+| `/admin/users` | Lista paginada, búsqueda, editar, eliminar, crear, resetear contraseña |
+| `/admin/logs` | Viewer del log de electron-log — líneas más recientes primero, botón limpiar |
 
 ### Seguridad del panel
 
+- **Sesiones de 7 días** — cookie `starcho_admin` con `HttpOnly; SameSite=Lax; Max-Age=604800`.
 - **Rate limiting** — 5 intentos fallidos por IP → bloqueo de 15 minutos.
-- **CSRF protection** — token de 16 bytes embebido en cada sesión; se inyecta automáticamente en todos los formularios POST vía JS; validación en el servidor con `crypto.timingSafeEqual`.
-- **Sesiones HttpOnly** — cookie `starcho_admin` con `HttpOnly; SameSite=Lax; Max-Age=86400`.
-- **Feedback de intentos** — el formulario de login indica cuántos intentos quedan antes del bloqueo.
+- **CSRF protection** — token de 16 bytes por sesión; inyectado automáticamente en todos los forms POST; validación con `crypto.timingSafeEqual`.
+- **Bug corregido** — todas las vistas ahora propagan `csrfToken` al layout para que la inyección automática funcione.
 
-### Configuración de ajustes rápidos
+### Dev Log (`/admin/logs`)
 
-Desde `/admin/config` se pueden cambiar con `<select>`:
+Muestra el contenido del archivo de log de `electron-log` en tiempo real:
 
-| Clave | Opciones |
-|-------|---------|
-| `theme` | 12 temas de UI con preview de colores en tiempo real |
-| `language` | es / en / pt |
-| `volume` | Slider 0–100 con indicador de % |
-| `repeat` | none / all / one / library |
-| `shuffle` | true / false |
-| `titlebar_theme` | default / mac / linux / cartoon |
+- Líneas coloreadas: rojo para `ERROR`, amarillo para `WARN`, gris para info
+- Orden inverso (más reciente primero)
+- Botón "Limpiar log" (POST con CSRF)
+- No requiere reiniciar la app — accede directamente al archivo de log
 
 ---
 
 ## Temas de Barra de Título (`titlebar_theme`)
 
-El starkit incluye 4 estilos para los controles de ventana (min/max/close). Se configuran con el atributo `data-titlebar` en `#title-bar`.
-
 | Tema | Descripción |
 |------|-------------|
-| `default` | Windows-style: controles a la derecha, circles rojos/amarillos/verdes |
-| `mac` | Controles a la **izquierda** en orden Close→Min→Max, efecto frosted glass con `backdrop-filter` |
-| `linux` | Botones **cuadrados** planos (GNOME/KDE palette), iconos siempre visibles, hover colorido |
-| `cartoon` | Botones grandes con animación de bounce, rebote y glow en hover; título con animación `hue-rotate` arco iris |
-
-El tema se lee de la clave `titlebar_theme` en la tabla `settings` durante el arranque:
-
-```js
-// app.js — applyTitlebarTheme()
-const bar = document.getElementById('title-bar');
-bar.dataset.titlebar = settings.titlebar_theme ?? 'default';
-```
-
-Para cambiar el tema: `/admin/config` → Ajustes rápidos → "Tema de la barra de título" → Guardar → Reiniciar app.
+| `default` | Windows-style: controles a la derecha |
+| `mac` | Controles a la izquierda, frosted glass |
+| `linux` | Botones cuadrados planos (GNOME/KDE) |
+| `cartoon` | Botones grandes con bounce y neon glow |
+| `stripe` | Gradiente azul-púrpura, ultra limpio |
 
 ---
 
@@ -704,49 +480,169 @@ Para cambiar el tema: `/admin/config` → Ajustes rápidos → "Tema de la barra
 
 El sistema de actualizaciones usa **electron-updater** apuntando a GitHub Releases. Solo activo en builds de producción.
 
-### Canales IPC del updater
-
-| Canal (main → renderer) | Payload | Cuándo |
-|--------------------------|---------|--------|
-| `updater:checking` | — | Inicia verificación |
-| `updater:update-available` | `{ version, releaseDate, releaseNotes }` | Nueva versión encontrada |
-| `updater:update-not-available` | `{ version }` | App ya está actualizada |
-| `updater:download-progress` | `{ percent, transferred, total, bytesPerSecond }` | Cada ~500 ms durante descarga |
-| `updater:update-downloaded` | `{ version, releaseDate }` | Instalador listo |
-| `updater:error` | `string` (mensaje) | Error en cualquier fase |
-
-| Canal (renderer → main) | Descripción |
-|--------------------------|-------------|
-| `updater:install` | Llama `quitAndInstall()` (instala y reinicia) |
-| `updater:check` | Verifica actualizaciones manualmente |
-
-### Banner de actualización
-
-Cuando hay una actualización disponible, aparece un banner animado en la parte inferior de la app con:
-
-- **Descargando** → barra de progreso con porcentaje y bytes transferidos, icono giratorio.
-- **Lista para instalar** → botones "Instalar y reiniciar" / "Más tarde" + notificación del SO.
-
-El banner se implementa en `src/renderer/styles/titlebar-themes.css` (clases `.update-banner`, `.upd-inner`, etc.) y se controla desde `wireUpdaterEvents()` en `app.js`.
-
 ### Publicar una actualización
 
-1. Incrementa `version` en `package.json` (ej: `1.0.2`).
-2. Crea un GitHub Release con el tag `v1.0.2`.
+1. Incrementa `version` en `package.json`.
+2. Crea un GitHub Release con el tag `vX.Y.Z`.
 3. Sube los binarios generados por `electron-builder` al release.
 4. Las apps en producción detectarán la nueva versión al arrancar o cada 4 h.
 
 ---
 
+## API REST
+
+| Método | Ruta | Descripción |
+|--------|------|-------------|
+| `POST` | `/api/auth/login` | Login — devuelve `{ ok, username, token, expiresAt }` |
+| `GET`  | `/api/auth/validate` | Valida token de sesión — devuelve `{ ok, username }` o 401 |
+| `POST` | `/api/auth/register` | Registro de usuario |
+| `GET`  | `/api/auth/profile` | Perfil de usuario |
+| `PUT`  | `/api/auth/profile` | Actualizar perfil |
+| `GET`  | `/api/settings` | Todos los ajustes |
+| `POST` | `/api/settings` | Guardar ajustes en bulk |
+| `GET`  | `/api/plugins` | Lista plugins con estado enabled |
+| `PUT`  | `/api/plugins/:id` | Activar/desactivar plugin |
+| `GET`  | `/api/plugins/:id/settings` | Configuración de plugin |
+| `POST` | `/api/plugins/:id/settings` | Guardar configuración de plugin |
+| `GET`  | `/api/tasks` | Tareas paginadas `{ items, total, page, perPage }` |
+| `POST` | `/api/tasks` | Crear tarea |
+| `PUT`  | `/api/tasks/:id` | Actualizar tarea |
+| `PATCH`| `/api/tasks/:id/status` | Cambiar estado de tarea |
+| `DELETE`| `/api/tasks/:id` | Soft-delete de tarea |
+| `GET`  | `/api/contacts` | Contactos paginados |
+| `GET`  | `/api/notes` | Notas paginadas |
+
+---
+
+## Variables de entorno (`.env`)
+
+```env
+APP_NAME=Mi App           # Aparece en sidebar y title bar
+APP_SLOGAN=Descripción    # Sub-texto del logo en sidebar
+APP_VERSION=1.0.0         # Aparece en title bar como "Mi App v1.0.0"
+LOGO_TEXT=Mi App
+
+DEVTOOLS=false     # true → abre DevTools al arrancar (solo dev)
+NODE_ENV=development
+
+APP_USER=admin          # Usuario por defecto si la tabla users está vacía
+APP_PASSWORD=admin123   # Contraseña por defecto
+```
+
+---
+
+## Almacenamiento en producción
+
+| Sistema | Ubicación |
+|---------|-----------|
+| Base de datos SQLite | `%APPDATA%/{appName}/{appName}.db` (Windows) |
+| Log de errores | `%APPDATA%/{appName}/logs/main.log` (electron-log) |
+| Media descargada | `%APPDATA%/{appName}/music/` |
+| Thumbnails | `%APPDATA%/{appName}/thumbnails/` |
+
+---
+
+## Arquitectura del renderer
+
+```
+src/renderer/
+  app.js              ← Boot, wiring, versión en title bar, hamburger mobile
+  router.js           ← Hash router — navega solo si hay usuario logueado (EventBus guard)
+  store.js            ← Estado global reactivo (setState → EventBus.emit)
+  login.js            ← Login/registro, auto-login por token, migración de auth_remember
+  core/
+    PluginRegistry.js ← Carga plugins, colecciona navItems/views/widgets
+  components/
+    Sidebar.js        ← Nav colapsable, i18n via t(labelKey), EventBus listener
+    Dashboard.js      ← Zonas header/content, system stats, quick actions
+    Player.js         ← Barra de reproducción, IPC con mini-player
+    Modal.js          ← Modales genéricos + openProfileModal()
+    Settings.js       ← Tabs de configuración, plugin settings
+    ui.js             ← Bloques de UI reutilizables
+  utils/
+    api.js            ← Cliente HTTP hacia Express backend
+    i18n.js           ← Diccionario EN/ES/PT, t(key), setLang(), THEMES, LANGUAGES
+    eventBus.js       ← Pub/sub liviano (on, off, emit)
+    errorHandler.js   ← initErrorHandler, logError, logWarn
+    html.js           ← Constructores HTML puros: esc, attr, statRow, badge, grid, formGroup
+    formatters.js     ← greeting, dateStr, fmtBytes, timeAgo, formatDuration, truncate
+    Paginator.js      ← Paginación AJAX universal — fetchFn recibe { page, per_page }
+    dialog.js         ← Promise-based confirm/alert compatible con Notiflix
+```
+
+---
+
+## Arquitectura del backend
+
+```
+src/backend/
+  server.js           ← Express app, rutas, 404/500 handlers, plugin activation
+  database/
+    connection.js     ← initDatabase(path), getDb() — singleton better-sqlite3
+    migrations.js     ← runMigrations(db) — CREATE TABLE IF NOT EXISTS, ALTER TABLE safe
+  routes/
+    index.js          ← Auth (login/validate/register/profile), config, settings, plugins
+                         Session store SQLite-backed — tokens 7 días, limpieza oportunista
+  admin/
+    router.js         ← Panel SSR: dashboard, menu, config, users, logs
+    sessions.js       ← Sesiones admin 7 días, CSRF, rate limiting
+    views/
+      _layout.js      ← Shell HTML con nav, estilos y auto-inyección CSRF
+      dashboard.js    ← Stats overview
+      menu.js         ← Plugin toggles
+      config.js       ← Quick settings + .env editor + CRUD settings
+      users.js        ← CRUD usuarios paginado
+      logs.js         ← Viewer del log de electron-log
+```
+
+---
+
+## Requisitos
+
+- Node.js 18+
+- npm 9+
+- Python 3 + Build Tools (para `better-sqlite3`)
+- yt-dlp en PATH (para descarga de YouTube, solo plugin starcho)
+- ffmpeg en PATH (para conversión, solo plugin starcho)
+
+---
+
 ## Changelog
+
+### v1.0.3
+
+**Seguridad y sesiones**
+- Autenticación por token — el login ya no guarda la contraseña en `localStorage`. Se genera un token aleatorio de 32 bytes, se almacena en SQLite (`app_sessions`) con TTL de 7 días y se valida al arrancar via `GET /api/auth/validate`.
+- Migración automática: `auth_remember` (viejo formato con contraseña) se elimina de localStorage en el primer arranque.
+- Sesión del panel admin extendida de 24 h a **7 días**.
+- Corrección CSRF admin: todas las vistas (`config`, `menu`, `users`, `dashboard`) ahora propagan correctamente el token al layout, resolviendo el error "Token de seguridad inválido" al guardar.
+
+**Dev Log movido a `/admin/logs`**
+- El Dev Log se quitó de Settings (donde solo era visible en modo dev) y se movió al panel de administración (`/admin/logs`), donde es siempre accesible para el administrador.
+- Nueva vista SSR con colores por severidad (ERROR/WARN/info), orden inverso cronológico y botón "Limpiar log".
+
+**Bug fixes**
+- Tasks: el ORDER BY con `CASE priority WHEN "urgent"` usaba comillas dobles — SQLite las interpreta como identificadores de columna, causando error "no such column: urgent". Corregido a comillas simples `'urgent'`.
+- Contacts: el widget del dashboard llamaba `.filter()` sobre el objeto paginado `{ items, total }` en lugar del array `items`, causando TypeError. Corregido con patrón `result.items ?? result`.
+- Dashboard: se eliminaron peticiones `GET /api/songs/stats` cuando el plugin `starcho` está desactivado (causaban 404 en consola).
+- API: agregados handlers 404 y 500 al router Express con logging via `electron-log`.
+- Router: eliminado el auth guard que bloqueaba la renderización inicial del dashboard antes del login.
+
+**Paginación**
+- Paginator: corregido el parámetro `per_page` (era `perPage` en camelCase, el backend espera snake_case).
+
+### v1.0.2-beta.1
+
+- Paginador universal (`Paginator.js`) para todos los plugins
+- Disco duro real en Dashboard via `getSystemStats` IPC
+- Live clock en Dashboard (actualización cada segundo)
 
 ### v1.0.1-beta.1
 
-- **Auto-updater mejorado** — eventos `download-progress`, `checking-for-update`, `update-not-available` y `updater:error`; banner de UI con barra de progreso y botones de instalación.
-- **Temas de titlebar** — estilos `mac`, `linux` y `cartoon` via CSS `[data-titlebar]`; cambiables desde el panel admin.
-- **Panel de administración** — `/admin` con login protegido, dashboard, gestión de plugins, configuración completa y gestión de usuarios con paginación/búsqueda/CRUD.
-- **Seguridad admin** — rate limiting de login (5 intentos → 15 min lockout), tokens CSRF por sesión, validación timing-safe.
-- **`titlebar_theme`** en la tabla `settings` — persiste el estilo de la barra de título entre reinicios.
+- Auto-updater con banner de progreso y botones de instalación
+- Temas de titlebar: mac, linux, cartoon, stripe
+- Panel de administración `/admin` con login, dashboard, plugins, config, usuarios
+- Seguridad admin: rate limiting, CSRF, sesiones HttpOnly
 
 ### v1.0.0
 

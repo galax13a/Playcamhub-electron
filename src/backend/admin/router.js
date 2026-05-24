@@ -52,6 +52,7 @@ const { dashboardPage } = require('./views/dashboard');
 const { menuPage }      = require('./views/menu');
 const { configPage }    = require('./views/config');
 const { usersPage }     = require('./views/users');
+const { logsPage }      = require('./views/logs');
 
 // ── Constants ────────────────────────────────────────────────────────────────
 
@@ -380,6 +381,35 @@ router.post('/users/reset-password', (req, res) => {
   } catch (err) {
     log.error('Admin pw reset:', err);
     flashErr(res, '/admin/users', err.message);
+  }
+});
+
+// ── Dev Log ───────────────────────────────────────────────────────────────────
+
+router.get('/logs', (req, res) => {
+  try {
+    const logPath = log.transports.file.getFile?.()?.path;
+    let logContent = '';
+    if (logPath) {
+      try { logContent = fs.readFileSync(logPath, 'utf8'); } catch (_) {}
+    }
+    res.send(logsPage({ logContent, flash: readFlash(req), csrfToken: csrf(req) }));
+  } catch (err) {
+    log.error('Admin logs:', err);
+    res.status(500).send('Error: ' + err.message);
+  }
+});
+
+router.post('/logs/clear', (req, res) => {
+  try {
+    const logPath = log.transports.file.getFile?.()?.path;
+    if (logPath) {
+      try { fs.writeFileSync(logPath, '', 'utf8'); } catch (_) {}
+    }
+    flashOk(res, '/admin/logs', 'Log limpiado correctamente');
+  } catch (err) {
+    log.error('Admin logs clear:', err);
+    flashErr(res, '/admin/logs', err.message);
   }
 });
 

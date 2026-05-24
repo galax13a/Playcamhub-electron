@@ -21,7 +21,7 @@ const log    = require('electron-log');
 const ADMIN_EMAIL    = 'root@starcho.com';
 const ADMIN_PASSWORD = '123456x';
 const COOKIE_NAME    = 'starcho_admin';
-const MAX_AGE_MS     = 24 * 60 * 60 * 1000;   // 24 h session lifetime
+const MAX_AGE_MS     = 7 * 24 * 60 * 60 * 1000; // 7-day session lifetime
 
 const RATE_MAX_ATTEMPTS = 5;                   // failed logins before lockout
 const RATE_LOCKOUT_MS   = 15 * 60 * 1000;     // 15-minute lockout window
@@ -143,7 +143,7 @@ function getToken(req) {
   return parseCookies(req)[COOKIE_NAME];
 }
 
-/** Sets the admin session cookie on the response. */
+/** Sets the admin session cookie on the response (7-day Max-Age). */
 function setSessionCookie(res, token) {
   res.setHeader(
     'Set-Cookie',

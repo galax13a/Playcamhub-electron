@@ -14,6 +14,30 @@ function hashPw(pw) {
   return crypto.createHash('sha256').update(pw + 'starcho-local-salt').digest('hex');
 }
 
+// ── App session store (SQLite-backed, 7-day tokens) ───────────────────────────
+const SESSION_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days in ms
+
+function createAppSession(username) {
+  const db        = getDb();
+  const token     = crypto.randomBytes(32).toString('hex');
+  const expiresAt = Date.now() + SESSION_TTL;
+  db.prepare('INSERT OR REPLACE INTO app_sessions (token, username, expires_at) VALUES (?, ?, ?)').run(token, username, expiresAt);
+  // Clean up expired sessions opportunistically
+  db.prepare('DELETE FROM app_sessions WHERE expires_at < ?').run(Date.now());
+  return { token, expiresAt };
+}
+
+function validateAppSession(token) {
+  if (!token) return null;
+  const db  = getDb();
+  const row = db.prepare('SELECT username FROM app_sessions WHERE token = ? AND expires_at > ?').get(token, Date.now());
+  return row ? row.username : null;
+}
+
+function destroyAppSession(token) {
+  try { getDb().prepare('DELETE FROM app_sessions WHERE token = ?').run(token); } catch (_) {}
+}
+
 function ensureDefaultUser(db) {
   const { c } = db.prepare('SELECT COUNT(*) as c FROM users').get();
   if (c === 0) {
@@ -33,6 +57,20 @@ router.post('/auth/login', validate(LoginSchema), (req, res) => {
     const user = db.prepare('SELECT * FROM users WHERE username = ?').get(username);
     if (!user || user.password !== hashPw(password))
       return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
+    const { token, expiresAt } = createAppSession(user.username);
+    res.json({ ok: true, username: user.username, token, expiresAt });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Validates a session token — called on app startup when a stored session exists
+router.get('/auth/validate', (req, res) => {
+  const token    = req.query.token;
+  const username = validateAppSession(token);
+  if (!username) return res.status(401).json({ error: 'Sesión expirada o inválida' });
+  try {
+    const db   = getDb();
+    const user = db.prepare('SELECT username FROM users WHERE username = ?').get(username);
+    if (!user) { destroyAppSession(token); return res.status(401).json({ error: 'Usuario no encontrado' }); }
     res.json({ ok: true, username: user.username });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });

@@ -78,7 +78,7 @@ function select(id, name, opts, current) {
  *   editKey?: string
  * }} data
  */
-function configPage({ settings = {}, envContent = '', flash } = {}) {
+function configPage({ settings = {}, envContent = '', flash, csrfToken = '' } = {}) {
 
   const cur = k => settings[k] || '';
 
@@ -314,7 +314,7 @@ function configPage({ settings = {}, envContent = '', flash } = {}) {
       </div>
     </div>`;
 
-  return layout({ title: 'Configuración', content, active: 'config', flash });
+  return layout({ title: 'Configuración', content, active: 'config', flash, csrfToken });
 }
 
 module.exports = { configPage };

@@ -69,42 +69,41 @@
   wireToggle('lp-toggle-pw',  'lp-password',  'lp-eye-icon');
   wireToggle('reg-toggle-pw', 'reg-password', 'reg-eye-icon');
 
-  // ── Auto-login if remembered session exists ──────────────────────────────
-  var remembered = null;
-  try { remembered = JSON.parse(localStorage.getItem('auth_remember') || 'null'); } catch (_) {}
+  // ── Auto-login via stored session token (7-day, no password stored) ─────────
+  // Migrate old auth_remember (stored plaintext password) → remove it on first run
+  localStorage.removeItem('auth_remember');
 
-  if (remembered && remembered.username && remembered.password) {
-    // Hide login page visually while attempting auto-login
+  var storedSession = null;
+  try { storedSession = JSON.parse(localStorage.getItem('auth_session') || 'null'); } catch (_) {}
+
+  // Discard client-side if expiry already passed (server is authoritative, but avoids a round-trip)
+  if (storedSession && storedSession.expiresAt && Date.now() > storedSession.expiresAt) {
+    localStorage.removeItem('auth_session');
+    storedSession = null;
+  }
+
+  if (storedSession && storedSession.token) {
     loginPg.style.opacity = '0';
 
     getPort().then(function (port) {
-      return fetch('http://127.0.0.1:' + port + '/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: remembered.username, password: remembered.password }),
-      });
+      return fetch('http://127.0.0.1:' + port + '/api/auth/validate?token=' + encodeURIComponent(storedSession.token));
     }).then(function (res) {
       return res.json().then(function (data) { return { ok: res.ok, data: data }; });
     }).then(function (r) {
       if (r.ok) {
-        // Auto-login succeeded — go straight to app
         window.dispatchEvent(new CustomEvent('user:login', { detail: r.data }));
         enter();
       } else {
-        // Credentials no longer valid — show login page pre-filled
-        localStorage.removeItem('auth_remember');
+        // Token expired or invalid — force re-login
+        localStorage.removeItem('auth_session');
         loginPg.style.opacity = '';
-        document.getElementById('lp-username').value = remembered.username;
-        document.getElementById('lp-remember').checked = true;
-        document.getElementById('lp-password').focus();
+        document.getElementById('lp-username').focus();
       }
     }).catch(function () {
-      // Server not ready yet — show login page pre-filled
+      // Server not ready yet — keep the session and show the form so user can retry
       loginPg.style.opacity = '';
-      document.getElementById('lp-username').value = remembered.username;
-      document.getElementById('lp-password').value = remembered.password;
-      document.getElementById('lp-remember').checked = true;
-      document.getElementById('login-btn').focus();
+      if (storedSession.username) document.getElementById('lp-username').value = storedSession.username;
+      document.getElementById('lp-password').focus();
     });
   } else {
     document.getElementById('lp-username').focus();
@@ -168,13 +167,18 @@
       })
       .then(function (r) {
         if (r.ok) {
-          if (rememberCk.checked) {
-            localStorage.setItem('auth_remember', JSON.stringify({
-              username: r.data.username || user,
-              password: pass,
+          // Store session token (never the password) — always saved so the
+          // app can validate on next restart without re-entering credentials.
+          // "Remember me" controls whether to keep it for 7 days or just this session.
+          if (rememberCk.checked && r.data.token) {
+            localStorage.setItem('auth_session', JSON.stringify({
+              token:      r.data.token,
+              username:   r.data.username || user,
+              expiresAt:  r.data.expiresAt,
             }));
           } else {
-            localStorage.removeItem('auth_remember');
+            // Not remembered — clear any previous session so next launch shows login
+            localStorage.removeItem('auth_session');
           }
           loginBtn.innerHTML = makeSvg('<polyline points="20 6 9 17 4 12"/>') + ' Bienvenido';
           loginBtn.style.background = 'linear-gradient(135deg,#10b981,#059669)';

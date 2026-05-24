@@ -10,7 +10,7 @@ const { layout } = require('./_layout');
  */
 
 /** @param {{ plugins:Array, users:Array, settings:Array }} data */
-function dashboardPage({ plugins, users, settings, flash } = {}) {
+function dashboardPage({ plugins, users, settings, flash, csrfToken = '' } = {}) {
   const total    = plugins.length;
   const active   = plugins.filter(p => p.enabled).length;
   const inactive = total - active;
@@ -101,7 +101,7 @@ function dashboardPage({ plugins, users, settings, flash } = {}) {
       </div>
     </div>`;
 
-  return layout({ title: 'Dashboard', content, active: 'dashboard', flash });
+  return layout({ title: 'Dashboard', content, active: 'dashboard', flash, csrfToken });
 }
 
 module.exports = { dashboardPage };

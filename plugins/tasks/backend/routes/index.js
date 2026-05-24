@@ -22,7 +22,9 @@ router.get('/', validate(TaskQuerySchema, 'query'), (req, res) => {
     if (uid)    { where += ' AND user_id = ?'; args.push(uid); }
     if (status) { where += ' AND status = ?';  args.push(status); }
 
-    const orderBy = 'ORDER BY CASE priority WHEN "urgent" THEN 0 WHEN "high" THEN 1 WHEN "medium" THEN 2 ELSE 3 END, due_date ASC';
+    // Single quotes required for string literals in SQLite CASE expressions.
+    // Double quotes are identifiers (column names) — using them causes "no such column: urgent".
+    const orderBy = "ORDER BY CASE priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'medium' THEN 2 ELSE 3 END, due_date ASC NULLS LAST";
     const total   = db.prepare(`SELECT COUNT(*) as n FROM tasks ${where}`).get(...args).n;
     const offset  = (page - 1) * per_page;
     const items   = db.prepare(`SELECT * FROM tasks ${where} ${orderBy} LIMIT ? OFFSET ?`).all(...args, per_page, offset);

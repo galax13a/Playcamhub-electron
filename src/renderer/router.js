@@ -66,7 +66,10 @@ function _updateSidebarActive(name) {
 }
 
 export function initRouter() {
-  EventBus.on('navigate', ({ view, ...extra }) => showView(view, extra));
+  EventBus.on('navigate', ({ view, ...extra }) => {
+    if (!store.state.loggedUser) return; // ignore nav events before login
+    showView(view, extra);
+  });
 
   // Re-render active view on language change
   EventBus.on('lang:change', () => {

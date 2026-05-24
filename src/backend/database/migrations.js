@@ -34,6 +34,13 @@ function runMigrations(db) {
       enabled      INTEGER NOT NULL DEFAULT 1,
       installed_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
+
+    CREATE TABLE IF NOT EXISTS app_sessions (
+      token      TEXT PRIMARY KEY,
+      username   TEXT NOT NULL,
+      expires_at INTEGER NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    );
   `);
 
   // ── Idempotent column additions ────────────────────────────────────────────

@@ -20,8 +20,6 @@ export async function renderSettings(el) {
 
   const plugins        = await API.plugins.list().catch(() => []);
   const starchoEnabled = plugins.some(p => p.id === 'starcho' && p.enabled);
-  const isDev          = await (window.electronAPI?.isDev?.() ?? Promise.resolve(false)).catch(() => false);
-
   el.innerHTML = `
     <div class="topbar">
       <span class="topbar-title">${t('settings_title')}</span>
@@ -38,7 +36,6 @@ export async function renderSettings(el) {
         <button class="sn-btn" data-sec="sec-plugins">🧩 Plugins</button>
         <button class="sn-btn" data-sec="sec-plan">⭐ ${t('plan_section')}</button>
         <button class="sn-btn" data-sec="sec-about">ℹ ${t('about')}</button>
-        ${isDev ? `<button class="sn-btn" data-sec="sec-devlog">🐛 Dev Log</button>` : ''}
       </div>
     </div>
 
@@ -195,6 +192,28 @@ export async function renderSettings(el) {
           </div>
           <p style="font-size:12px;color:var(--text-muted);margin-top:10px">
             Se aplica en el próximo inicio de sesión o reinicio.
+          </p>
+        </div>
+
+        <!-- Titlebar style -->
+        <div class="appearance-group" style="margin-top:24px">
+          <div class="appearance-group-label">Barra de título</div>
+          <div class="tb-theme-grid" id="tb-theme-cards">
+            ${[
+              { id: 'default', label: 'Windows',     icon: '🪟', desc: 'Botones a la derecha, estilo Windows' },
+              { id: 'mac',     label: 'macOS',        icon: '🍎', desc: 'Botones a la izquierda, vidrio esmerilado' },
+              { id: 'linux',   label: 'Linux',        icon: '🐧', desc: 'Botones cuadrados, estilo GNOME/KDE' },
+              { id: 'cartoon', label: 'Gamer/Arcade', icon: '🕹️', desc: 'Botones gigantes, neon y animaciones' },
+              { id: 'stripe',  label: 'Stripe',       icon: '💳', desc: 'Gradiente azul púrpura, ultra limpio' },
+            ].map(th => `
+              <button class="tb-theme-card ${(merged.titlebar_theme || 'default') === th.id ? 'active' : ''}"
+                      data-tbtheme="${th.id}" title="${th.desc}">
+                <span class="tb-theme-icon">${th.icon}</span>
+                <span class="tb-theme-label">${th.label}</span>
+              </button>`).join('')}
+          </div>
+          <p style="font-size:12px;color:var(--text-muted);margin-top:10px">
+            Se aplica inmediatamente sin reiniciar.
           </p>
         </div>
       </div>
@@ -356,27 +375,6 @@ export async function renderSettings(el) {
         </div>
       </div>
 
-      <!-- ── Dev Log ───────────────────────────────────────── -->
-      ${isDev ? `
-      <div class="settings-section" id="sec-devlog">
-        <div class="settings-section-title">🐛 Dev Log</div>
-        <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px">
-          Errores capturados durante esta sesión. Solo visible en modo desarrollo.
-        </p>
-        <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
-          <button class="btn btn-sm" id="btn-clear-log"
-                  style="background:rgba(255,50,50,.12);color:var(--red);border:1px solid rgba(255,50,50,.3)">
-            🗑 Limpiar log
-          </button>
-        </div>
-        <div id="devlog-content"
-             style="background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius-md);
-                    padding:12px 14px;font-family:monospace;font-size:11.5px;line-height:1.7;
-                    color:var(--text-secondary);max-height:360px;overflow-y:auto;
-                    white-space:pre-wrap;word-break:break-all">
-          Cargando…
-        </div>
-      </div>` : ''}
 
       <div style="height:40px"></div>
     </div>`;
@@ -395,7 +393,6 @@ export async function renderSettings(el) {
   _bindActivation(el, settings);
   _bindReset(el);
   _loadLibraryStats(el);
-  if (isDev) _bindDevLog(el);
 }
 
 // ── Section nav ──────────────────────────────────────────────────────────────
@@ -602,6 +599,22 @@ function _bindAppearance(el) {
         if (lbl) lbl.style.color = c === card ? 'var(--red)' : '';
       });
       showToast(`Login: ${ltheme.charAt(0).toUpperCase() + ltheme.slice(1)}`, 'success');
+    });
+  });
+
+  el.querySelectorAll('.tb-theme-card').forEach(card => {
+    card.addEventListener('click', async () => {
+      const theme = card.dataset.tbtheme;
+      await API.settings.setMany({ titlebar_theme: theme });
+      store.setState({ settings: { ...store.state.settings, titlebar_theme: theme } });
+      // Apply immediately — no restart needed
+      const bar = document.getElementById('title-bar');
+      if (bar) {
+        const valid = ['mac', 'linux', 'cartoon', 'stripe'];
+        bar.dataset.titlebar = valid.includes(theme) ? theme : 'default';
+      }
+      el.querySelectorAll('.tb-theme-card').forEach(c => c.classList.toggle('active', c === card));
+      showToast(`Barra de título: ${card.querySelector('.tb-theme-label').textContent}`, 'success');
     });
   });
 }
@@ -913,40 +926,5 @@ function _fmtBytes(bytes) {
   return `${(bytes / 1024 ** 3).toFixed(2)} GB`;
 }
 
-// ── Dev Log ───────────────────────────────────────────────────────────────────
-
-async function _bindDevLog(el) {
-  const contentEl = el.querySelector('#devlog-content');
-  const clearBtn  = el.querySelector('#btn-clear-log');
-
-  async function refreshLog() {
-    try {
-      const text = await window.electronAPI?.readLog?.() ?? '';
-      if (!contentEl) return;
-      if (!text.trim()) {
-        contentEl.textContent = '(Sin errores registrados)';
-        return;
-      }
-      const lines = text.trim().split('\n').reverse();
-      contentEl.innerHTML = lines.map(line => {
-        const isErr  = line.includes('ERROR');
-        const isWarn = line.includes('WARN');
-        const color  = isErr ? 'var(--red)' : isWarn ? '#f59e0b' : 'var(--text-secondary)';
-        return `<span style="color:${color}">${_safe(line)}</span>`;
-      }).join('\n');
-      contentEl.scrollTop = 0;
-    } catch (_) {
-      if (contentEl) contentEl.textContent = 'No se pudo cargar el log.';
-    }
-  }
-
-  clearBtn?.addEventListener('click', async () => {
-    await window.electronAPI?.clearLog?.();
-    if (contentEl) contentEl.textContent = '(Sin errores registrados)';
-    showToast('Log limpiado', 'success');
-  });
-
-  await refreshLog();
-}
 
 function _safe(v) { return v ? String(v).replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;') : ''; }

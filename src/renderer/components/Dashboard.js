@@ -35,12 +35,15 @@ export async function renderDashboard(el) {
   let diskText    = '—';
   let audioCount  = songs.length;
   let videoCount  = 0;
-  try {
-    const stats = await API.songs.stats();
-    audioCount  = stats.audioCount ?? audioCount;
-    videoCount  = stats.videoCount ?? 0;
-    diskText    = fmtBytes(stats.diskBytes);
-  } catch (_) {}
+  const starchoActive = PluginRegistry.getPlugins().some(p => p.id === 'starcho');
+  if (starchoActive) {
+    try {
+      const stats = await API.songs.stats();
+      audioCount  = stats.audioCount ?? audioCount;
+      videoCount  = stats.videoCount ?? 0;
+      diskText    = fmtBytes(stats.diskBytes);
+    } catch (_) {}
+  }
 
   // Build quick-action list: core shortcuts + all plugin nav items
   const pluginNav = PluginRegistry.getNavItems();

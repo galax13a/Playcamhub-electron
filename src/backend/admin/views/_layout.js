@@ -12,6 +12,7 @@ const NAV = [
   { key: 'menu',      icon: '☰',  label: 'Menú & Plugins',  href: '/admin/menu' },
   { key: 'config',    icon: '⚙',  label: 'Configuración',   href: '/admin/config' },
   { key: 'users',     icon: '👤', label: 'Usuarios',        href: '/admin/users' },
+  { key: 'logs',      icon: '📋', label: 'Dev Log',         href: '/admin/logs' },
 ];
 
 /** @param {{ title:string, content:string, active?:string, flash?:{type:string,msg:string}, csrfToken?:string }} opts */

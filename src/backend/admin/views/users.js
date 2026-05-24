@@ -22,7 +22,7 @@ function esc(v) {
  *   editUser?: object
  * }} data
  */
-function usersPage({ users = [], flash, page = 1, totalPages = 1, total = 0, search = '', editUser = null } = {}) {
+function usersPage({ users = [], flash, page = 1, totalPages = 1, total = 0, search = '', editUser = null, csrfToken = '' } = {}) {
 
   // ── Edit panel (shown when ?edit=ID) ──────────────────────────────────────
 
@@ -210,7 +210,7 @@ function usersPage({ users = [], flash, page = 1, totalPages = 1, total = 0, sea
       </div>
     </div>`;
 
-  return layout({ title: 'Usuarios', content, active: 'users', flash });
+  return layout({ title: 'Usuarios', content, active: 'users', flash, csrfToken });
 }
 
 module.exports = { usersPage };

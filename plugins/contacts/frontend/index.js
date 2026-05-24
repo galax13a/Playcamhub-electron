@@ -41,7 +41,10 @@ export default {
       id: 'contacts-summary', zone: 'content', priority: 60, title: '👥 Contactos',
       async render(el) {
         let contacts = [];
-        try { contacts = await API.contacts.list(); } catch (_) {}
+        try {
+          const result = await API.contacts.list();
+          contacts = result.items ?? result;
+        } catch (_) {}
 
         const active   = contacts.filter(c => c.active !== 0).length;
         const inactive = contacts.length - active;
