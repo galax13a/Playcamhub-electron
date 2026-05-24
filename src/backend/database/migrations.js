@@ -69,6 +69,9 @@ function runMigrations(db) {
   safe("ALTER TABLE users ADD COLUMN ban_reason                TEXT");
   safe("ALTER TABLE users ADD COLUMN updated_at                DATETIME");
 
+  // Media editor state
+  safe("ALTER TABLE media ADD COLUMN editor_state TEXT");
+
   // Sync email = username for existing rows where email is null
   safe("UPDATE users SET email = username WHERE email IS NULL");
   // Sync name = full_name for existing rows where name is empty
@@ -89,6 +92,12 @@ function runMigrations(db) {
     ['ai_stability_model', 'stable-diffusion-xl-1024-v1-0'],
     ['ai_replicate_key',   ''],
     ['ai_replicate_model', 'black-forest-labs/flux-dev'],
+    // Login side panel branding
+    ['login_side_title',    'PlaycamHub Studio'],
+    ['login_side_sub',      'Plataforma de desarrollo ágil para aplicaciones de escritorio'],
+    ['login_side_features', '["Sistema de plugins modular","Base de datos SQLite integrada","Multi-idioma y 10+ temas","Reproductor de medios completo"]'],
+    ['login_side_badge',    'Beta 1.0.2 — Acceso restringido'],
+    ['login_logo_svg',      ''],
   ];
   const upsert = db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)');
   defaults.forEach(([k, v]) => upsert.run(k, v));

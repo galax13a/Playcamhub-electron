@@ -255,8 +255,11 @@ export async function renderGallery(el, extra = {}) {
       <select class="form-control" id="gal-sort" style="font-size:13px">
         <option value="date_desc">📅 Más reciente</option>
         <option value="date_asc">📅 Más antiguo</option>
+        <option value="modified">✏️ Último editado</option>
         <option value="size_desc">💾 Mayor tamaño</option>
+        <option value="size_asc">💾 Menor tamaño</option>
         <option value="views">👁 Más vistas</option>
+        <option value="downloads">⬇️ Más descargas</option>
         <option value="likes">❤️ Más likes</option>
         <option value="rating">⭐ Mejor rating</option>
       </select>
@@ -270,8 +273,21 @@ export async function renderGallery(el, extra = {}) {
       </select>
     </div>
     <div>
-      <label style="font-size:11px;font-weight:700;letter-spacing:.6px;color:var(--text-muted);display:block;margin-bottom:6px">TAMAÑO MÍNIMO (MB)</label>
-      <input type="number" class="form-control" id="gal-min-size" min="0" step="0.1" placeholder="0" style="font-size:13px">
+      <label style="font-size:11px;font-weight:700;letter-spacing:.6px;color:var(--text-muted);display:block;margin-bottom:6px">TAMAÑO (MB)</label>
+      <div style="display:flex;gap:6px">
+        <input type="number" class="form-control" id="gal-min-size" min="0" step="0.1" placeholder="Mín" style="font-size:13px;flex:1">
+        <input type="number" class="form-control" id="gal-max-size" min="0" step="0.1" placeholder="Máx" style="font-size:13px;flex:1">
+      </div>
+    </div>
+    <div>
+      <label style="font-size:11px;font-weight:700;letter-spacing:.6px;color:var(--text-muted);display:block;margin-bottom:6px">RATING MÍNIMO ⭐</label>
+      <select class="form-control" id="gal-min-rating" style="font-size:13px">
+        <option value="">Todos</option>
+        <option value="2">2+ ⭐⭐</option>
+        <option value="4">4+ ⭐⭐⭐⭐</option>
+        <option value="6">6+ ⭐⭐⭐⭐⭐⭐</option>
+        <option value="8">8+ ⭐⭐⭐⭐⭐⭐⭐⭐</option>
+      </select>
     </div>
     <div style="display:flex;align-items:flex-end">
       <button class="btn btn-sm btn-primary" id="gal-apply-filters" style="width:100%">✅ Aplicar filtros</button>
@@ -287,11 +303,13 @@ export async function renderGallery(el, extra = {}) {
   });
 
   filterPanel.querySelector('#gal-apply-filters').addEventListener('click', () => {
-    sortBy = filterPanel.querySelector('#gal-sort').value;
+    sortBy      = filterPanel.querySelector('#gal-sort').value;
+    minSize     = filterPanel.querySelector('#gal-min-size').value || '';
+    maxSize     = filterPanel.querySelector('#gal-max-size').value || '';
+    minRating   = filterPanel.querySelector('#gal-min-rating').value || '';
     const typeFilter = filterPanel.querySelector('#gal-type-filter').value;
     if (typeFilter !== 'all') {
       activeTab = typeFilter;
-      // Sync tabs UI
       filterBar.querySelectorAll('.gal-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === typeFilter));
     }
     page = 1;
@@ -323,7 +341,10 @@ export async function renderGallery(el, extra = {}) {
   let activeTab  = 'all';
   let search     = '';
   let selectMode = false;
-  let sortBy     = 'date_desc';   // 'date_desc' | 'date_asc' | 'size_desc' | 'views' | 'likes' | 'rating'
+  let sortBy     = 'date_desc';
+  let minSize    = '';
+  let maxSize    = '';
+  let minRating  = '';
   let filterFavs = false;
   let currentItems = [];      // loaded items for preview navigation
   const selected = new Set();
@@ -368,11 +389,12 @@ export async function renderGallery(el, extra = {}) {
       const params = { page, perPage: PER_PAGE };
       if (activeTab === 'favorite') { params.favorite = 'true'; }
       else if (activeTab !== 'all') { params.type = activeTab; }
-      if (search)  params.search  = search;
-      if (albumId) params.albumId = albumId;
-      if (sortBy) params.sortBy = sortBy;
-      const minSizeEl = document.getElementById('gal-min-size');
-      if (minSizeEl?.value) params.minSize = Math.floor(parseFloat(minSizeEl.value) * 1024 * 1024);
+      if (search)    params.search    = search;
+      if (albumId)   params.albumId   = albumId;
+      if (sortBy)    params.sortBy    = sortBy;
+      if (minSize)   params.minSize   = minSize;
+      if (maxSize)   params.maxSize   = maxSize;
+      if (minRating) params.minRating = minRating;
 
       const res   = await API.media.list(params);
       const items = res.items || [];

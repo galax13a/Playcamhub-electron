@@ -56,8 +56,27 @@ export function showToast(msg, type = 'info') {
 }
 
 // ── Generic modal ─────────────────────────────────────────────────────────────
+// Supports two call styles:
+//   Legacy:  { title, content, actions:[{label, class, action:fn(close,bodyEl)}] }
+//   New:     { title, body, buttons:[{label, action:'string', primary}], onClose:fn(action) }
 
-export function openModal({ title, content, actions = [] }) {
+export function openModal(opts) {
+  if (!_container) return { close: () => {} };
+
+  const title   = opts.title ?? '';
+  const content = String(opts.content ?? opts.body ?? '');
+  const onClose = opts.onClose ?? null;
+
+  // Unify footer buttons: prefer opts.actions (legacy), fall back to opts.buttons (new style)
+  let footerActions = opts.actions ?? [];
+  if (!footerActions.length && opts.buttons?.length) {
+    footerActions = opts.buttons.map(b => ({
+      label:  b.label,
+      class:  b.primary ? 'btn-primary' : 'btn-secondary',
+      action: (closeFn) => { closeFn(); onClose?.(b.action ?? null); },
+    }));
+  }
+
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.innerHTML = `
@@ -67,9 +86,9 @@ export function openModal({ title, content, actions = [] }) {
         <button class="modal-close" id="modal-close-btn">✕</button>
       </div>
       <div class="modal-body">${content}</div>
-      ${actions.length ? `
+      ${footerActions.length ? `
         <div class="modal-footer" style="display:flex;gap:10px;justify-content:flex-end;margin-top:24px">
-          ${actions.map((a, i) => `
+          ${footerActions.map((a, i) => `
             <button class="btn ${a.class || 'btn-secondary'}" id="modal-action-${i}">
               ${a.label}
             </button>`).join('')}
@@ -78,6 +97,8 @@ export function openModal({ title, content, actions = [] }) {
   _container.appendChild(overlay);
   requestAnimationFrame(() => overlay.classList.add('open'));
 
+  const bodyEl = overlay.querySelector('.modal-body');
+
   function close() {
     overlay.querySelector('.modal')?.classList.add('closing');
     overlay.classList.add('closing');
@@ -85,17 +106,22 @@ export function openModal({ title, content, actions = [] }) {
     setTimeout(() => overlay.remove(), 300);
   }
 
-  const bodyEl = overlay.querySelector('.modal-body');
+  overlay.querySelector('#modal-close-btn').onclick = () => { close(); onClose?.(null); };
+  overlay.addEventListener('click', e => { if (e.target === overlay) { close(); onClose?.(null); } });
 
-  overlay.querySelector('#modal-close-btn').onclick = close;
-  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
-
-  actions.forEach((a, i) => {
-    overlay.querySelector(`#modal-action-${i}`).onclick = () => {
-      if (a.action) a.action(close, bodyEl);
-      else close();
-    };
+  footerActions.forEach((a, i) => {
+    const btn = overlay.querySelector(`#modal-action-${i}`);
+    if (btn) btn.onclick = () => { if (a.action) a.action(close, bodyEl); else close(); };
   });
+
+  // Auto-wire [data-action] buttons inside body for context-menu style modals
+  if (onClose) {
+    requestAnimationFrame(() => {
+      bodyEl.querySelectorAll('[data-action]').forEach(btn => {
+        btn.addEventListener('click', () => { const a = btn.dataset.action; close(); onClose(a); });
+      });
+    });
+  }
 
   return { close };
 }

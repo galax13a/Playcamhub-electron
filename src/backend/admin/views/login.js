@@ -130,7 +130,7 @@ function loginPage({ error } = {}) {
       </form>
     </div>
 
-    <div class="login-hint">StarchoElectron Admin · Solo acceso local</div>
+    <div class="login-hint">PlaycamHub Studio Admin · Solo acceso local</div>
   </div>
 
   <script>

@@ -3,6 +3,7 @@
  * Photos are always converted to WEBP on the server.
  */
 import { getBase } from '../../../../src/renderer/utils/api.js';
+import store        from '../../../../src/renderer/store.js';
 import { viewHeader } from '../../../../src/renderer/components/ui.js';
 import { showToast } from '../../../../src/renderer/components/Modal.js';
 import { esc } from '../../../../src/renderer/utils/html.js';
@@ -185,7 +186,7 @@ async function _uploadOne(file, accent, progressList) {
         0%
       </span>
     </div>
-    <div style="width:100%;height:4px;background:var(--bg-2);border-radius:2px;overflow:hidden">
+    <div class="up-track" style="width:100%;height:4px;background:var(--bg-2);border-radius:2px;overflow:hidden">
       <div class="up-bar" style="
         width:0%;height:100%;
         background:${accent};
@@ -199,11 +200,12 @@ async function _uploadOne(file, accent, progressList) {
   const statusEl = row.querySelector('.up-status');
   const barEl    = row.querySelector('.up-bar');
 
+  let result = null;
   try {
     const token = _getToken();
     const base  = getBase();
 
-    await new Promise((resolve, reject) => {
+    result = await new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
       xhr.open('POST', `${base}/api/media/upload`);
       if (token) xhr.setRequestHeader('Authorization', 'Bearer ' + token);
@@ -232,10 +234,42 @@ async function _uploadOne(file, accent, progressList) {
       xhr.send(fd);
     });
 
-    barEl.style.width    = '100%';
+    barEl.style.width      = '100%';
     barEl.style.background = '#06D6A0';
-    statusEl.textContent = isPhoto ? '✅ Done (WEBP)' : '✅ Done';
-    statusEl.style.color = '#06D6A0';
+    statusEl.textContent   = isPhoto ? '✅ Done (WEBP)' : '✅ Done';
+    statusEl.style.color   = '#06D6A0';
+
+    // Capture video thumbnail from canvas (async, non-blocking)
+    if (!isPhoto && result?.id) {
+      _captureVideoThumbnail(file, result.id);
+    }
+
+    // Replace progress track with action buttons
+    const track = row.querySelector('.up-track');
+    if (track && result?.id) {
+      track.innerHTML = '';
+      track.style.cssText = 'display:flex;gap:8px;padding-top:2px;flex-wrap:wrap';
+
+      const viewBtn = document.createElement('button');
+      viewBtn.className   = 'btn btn-sm btn-primary';
+      viewBtn.textContent = isPhoto ? '🖼️ Ver foto' : '▶️ Reproducir';
+      viewBtn.addEventListener('click', () =>
+        store.navigate(isPhoto ? 'starcho:photo-editor' : 'starcho:video-viewer', { id: result.id })
+      );
+
+      const galBtn = document.createElement('button');
+      galBtn.className   = 'btn btn-sm btn-secondary';
+      galBtn.textContent = '🖼️ Ver en Galería';
+      galBtn.addEventListener('click', () => store.navigate('starcho:gallery'));
+
+      const feedBtn = document.createElement('button');
+      feedBtn.className   = 'btn btn-sm btn-secondary';
+      feedBtn.textContent = '📹 Feed';
+      feedBtn.style.display = isPhoto ? 'none' : '';
+      feedBtn.addEventListener('click', () => store.navigate('starcho:video-feed'));
+
+      track.append(viewBtn, galBtn, feedBtn);
+    }
   } catch (err) {
     barEl.style.background = '#FF3366';
     barEl.style.width      = '100%';
@@ -257,4 +291,48 @@ function _fmtSize(bytes) {
   if (bytes < 1024)        return bytes + ' B';
   if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
   return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+}
+
+// Captures a frame from the video File object via canvas and POSTs it as thumbnail.
+async function _captureVideoThumbnail(file, mediaId) {
+  try {
+    const blobUrl = URL.createObjectURL(file);
+    const video   = document.createElement('video');
+    video.muted   = true;
+    video.preload = 'metadata';
+
+    await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => reject(new Error('timeout')), 10000);
+      video.onloadedmetadata = () => {
+        video.currentTime = Math.min(1.5, (video.duration || 3) * 0.1);
+      };
+      video.onseeked = () => { clearTimeout(timeout); resolve(); };
+      video.onerror  = () => { clearTimeout(timeout); reject(new Error('video error')); };
+      video.src = blobUrl;
+    });
+
+    const W = Math.min(video.videoWidth  || 640, 640);
+    const H = Math.min(video.videoHeight || 360, 360);
+    const canvas = document.createElement('canvas');
+    canvas.width  = W;
+    canvas.height = H;
+    canvas.getContext('2d').drawImage(video, 0, 0, W, H);
+
+    URL.revokeObjectURL(blobUrl);
+
+    const blob = await new Promise(res => canvas.toBlob(res, 'image/png', 0.9));
+    if (!blob) return;
+
+    const fd = new FormData();
+    fd.append('thumb', blob, 'thumb.png');
+
+    const token = _getToken();
+    const base  = getBase();
+    const xhr   = new XMLHttpRequest();
+    xhr.open('POST', `${base}/api/media/${mediaId}/video-thumb`);
+    if (token) xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+    xhr.send(fd);
+  } catch (_) {
+    // Thumbnail capture is best-effort; silently ignore failures
+  }
 }

@@ -347,6 +347,38 @@ body {
   user-select: none;
 }
 
+/* ── Nav group (collapsible: "Multimedia Play") ──────────────────────────── */
+.nav-group-header {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  position: relative;
+  transition: background .15s, color .15s;
+}
+.nav-group-header:hover { background: var(--bg-glass-hover); color: var(--text-primary); }
+.nav-group-arrow {
+  margin-left: auto;
+  font-size: 11px;
+  opacity: .6;
+  transition: transform .22s ease;
+}
+.nav-group.open .nav-group-arrow { transform: rotate(180deg); }
+.nav-group-items {
+  overflow: hidden;
+  max-height: 0;
+  transition: max-height .25s ease;
+}
+.nav-group.open .nav-group-items { max-height: 500px; }
+.nav-sub-item { padding-left: 32px !important; }
+
 .sidebar-section {
   flex: 1;
   overflow-y: auto;
@@ -1090,7 +1122,7 @@ body {
   padding-top: var(--titlebar-height);
   background: rgba(0,0,0,.72);
   backdrop-filter: blur(5px);
-  z-index: 1000;
+  z-index: 10000;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3187,8 +3219,26 @@ select.form-control { cursor: pointer; appearance: none; }
 /* Hide text-only elements when collapsed */
 .sidebar--collapsed .logo-text-group,
 .sidebar--collapsed .nav-label,
-.sidebar--collapsed .nav-section-label {
+.sidebar--collapsed .nav-section-label,
+.sidebar--collapsed .nav-group-arrow {
   display: none;
+}
+
+/* Collapsed: group header becomes icon-only centered */
+.sidebar--collapsed .nav-group-header {
+  justify-content: center;
+  padding: 10px 6px;
+  gap: 0;
+}
+
+/* Collapsed: always show group items (no label to collapse by) */
+.sidebar--collapsed .nav-group-items {
+  max-height: 500px !important;
+}
+
+/* Collapsed: sub-items lose indent, center like regular items */
+.sidebar--collapsed .nav-sub-item {
+  padding-left: 0 !important;
 }
 
 /* Hide separators in collapsed mode (they look odd without labels) */
@@ -3245,7 +3295,8 @@ select.form-control { cursor: pointer; appearance: none; }
   }
   #sidebar .logo-text-group,
   #sidebar .nav-label,
-  #sidebar .nav-section-label {
+  #sidebar .nav-section-label,
+  #sidebar .nav-group-arrow {
     display: none;
   }
   #sidebar .sidebar-logo {
@@ -3261,6 +3312,13 @@ select.form-control { cursor: pointer; appearance: none; }
     padding: 10px 6px;
     gap: 0;
   }
+  #sidebar .nav-group-header {
+    justify-content: center;
+    padding: 10px 6px;
+    gap: 0;
+  }
+  #sidebar .nav-group-items { max-height: 500px !important; }
+  #sidebar .nav-sub-item { padding-left: 0 !important; }
   #sidebar .sidebar-footer .sidebar-user {
     flex-direction: column;
     gap: 4px;
@@ -3302,10 +3360,13 @@ select.form-control { cursor: pointer; appearance: none; }
   #sidebar .logo-text-group,
   #sidebar .nav-label,
   #sidebar .nav-section-label,
+  #sidebar .nav-group-arrow,
   #sidebar .sb-user-info { display: revert; }
   #sidebar .sb-collapse-btn { display: none; }
   #sidebar .sidebar-logo { justify-content: flex-start; padding: 16px 14px 14px; gap: 10px; }
   #sidebar .nav-item { justify-content: flex-start; padding: 10px 12px; gap: 11px; }
+  #sidebar .nav-group-header { justify-content: flex-start; padding: 10px 12px; gap: 11px; }
+  #sidebar .nav-sub-item { padding-left: 32px !important; }
   #sidebar .sidebar-footer .sidebar-user { flex-direction: row; gap: 10px; padding: 10px 12px; }
   #sidebar .sb-avatar { width: 34px; height: 34px; }
   #sidebar .sb-logout-icon-btn { margin-left: auto; }

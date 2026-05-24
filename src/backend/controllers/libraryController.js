@@ -38,7 +38,7 @@ const libraryController = {
 
       res.json({
         version:     '1.0',
-        app:         'StarchoElectron',
+        app:         'PlaycamHub Studio',
         exported_at: new Date().toISOString(),
         songs: songs.map(s => ({
           id:             s.id,

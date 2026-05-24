@@ -110,6 +110,14 @@ const PluginRegistry = {
     }
   },
 
+  /** Clear all registered plugins so init() can be called again after login. */
+  reset() {
+    _plugins.splice(0);
+    _navItems.splice(0);
+    _dashboardWidgets.splice(0);
+    Object.keys(_views).forEach(k => delete _views[k]);
+  },
+
   getNavItems()  { return _navItems; },
   getPlugins()   { return _plugins; },
   hasView(key)   { return key in _views; },

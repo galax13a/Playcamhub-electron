@@ -40,7 +40,8 @@ const upload = multer({
 
 // ── GET /api/media ────────────────────────────────────────────────────────────
 router.get('/', (req, res) => {
-  const { page = 1, perPage = 20, type, search, favorite, albumId, sortBy, minSize } = req.query;
+  const { page = 1, perPage = 20, type, search, favorite, albumId, sortBy,
+          minSize, maxSize, minRating } = req.query;
   const db = getDb();
   try {
     let q = 'SELECT * FROM media WHERE 1=1';
@@ -49,6 +50,9 @@ router.get('/', (req, res) => {
     if (favorite === 'true')    { q += ' AND is_favorite = 1'; }
     if (search)                 { q += ' AND (file_name LIKE ? OR COALESCE(title,"") LIKE ?)'; params.push(`%${search}%`, `%${search}%`); }
     if (albumId)                { q += ' AND album_id = ?'; params.push(parseInt(albumId)); }
+    if (minSize)    { q += ' AND file_size >= ?'; params.push(parseFloat(minSize) * 1024 * 1024); }
+    if (maxSize)    { q += ' AND file_size <= ?'; params.push(parseFloat(maxSize) * 1024 * 1024); }
+    if (minRating)  { q += ' AND COALESCE(rating,0) >= ?'; params.push(parseFloat(minRating)); }
 
     const cnt    = db.prepare(q.replace('SELECT *', 'SELECT COUNT(*) as cnt')).get(...params).cnt;
     const offset = (parseInt(page) - 1) * parseInt(perPage);
@@ -56,12 +60,14 @@ router.get('/', (req, res) => {
       date_desc:  'created_at DESC',
       date_asc:   'created_at ASC',
       size_desc:  'file_size DESC',
+      size_asc:   'file_size ASC',
       views:      'view_count DESC',
       likes:      'likes DESC',
       rating:     'rating DESC',
+      downloads:  'COALESCE(download_count,0) DESC',
+      modified:   'COALESCE(updated_at, created_at) DESC',
     };
     const orderBy = sortMap[sortBy] || 'created_at DESC';
-    if (minSize) { q += ' AND file_size >= ?'; params.push(parseInt(minSize)); }
     q += ` ORDER BY ${orderBy} LIMIT ? OFFSET ?`;
     params.push(parseInt(perPage), offset);
 
@@ -479,6 +485,21 @@ router.post('/:id/replace', replaceUpload.single('image'), async (req, res) => {
     console.error('[media] replace:', err.message);
     res.status(500).json({ error: err.message });
   }
+});
+
+// ── PATCH /api/media/:id/editor-state ────────────────────────────────────────
+router.patch('/:id/editor-state', (req, res) => {
+  const db = getDb();
+  const editorState = req.body.editor_state;
+  if (editorState === undefined) return res.status(400).json({ error: 'editor_state required' });
+  try {
+    const m = db.prepare('SELECT id FROM media WHERE id = ?').get(req.params.id);
+    if (!m) return res.status(404).json({ error: 'Not found' });
+    const val = editorState ? JSON.stringify(editorState) : null;
+    db.prepare('UPDATE media SET editor_state = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?')
+      .run(val, req.params.id);
+    res.json({ success: true });
+  } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // ── PATCH /api/media/:id/rename ──────────────────────────────────────────────

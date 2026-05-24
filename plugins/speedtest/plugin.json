@@ -1,0 +1,10 @@
+{
+  "id":          "speedtest",
+  "name":        "Speed Test",
+  "version":     "1.0.0",
+  "description": "Real-time network speed test — download, upload and ping with animated gauge.",
+  "author":      "PlaycamHub Dev",
+  "icon":        "⚡",
+  "color":       "#00BCD4",
+  "enabled":     false
+}

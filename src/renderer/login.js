@@ -9,8 +9,31 @@
     return fetch('http://127.0.0.1:' + port + '/api/settings');
   }).then(function (res) { return res.json(); })
     .then(function (s) {
-      if (s && s.login_theme) loginPg.setAttribute('data-ltheme', s.login_theme);
-    }).catch(function () { /* keep HTML default 'nebula' */ });
+      if (!s) return;
+      if (s.login_theme) loginPg.setAttribute('data-ltheme', s.login_theme);
+
+      // Dynamic branding
+      var titleEl    = loginPg.querySelector('.lp-side-title');
+      var subEl      = loginPg.querySelector('.lp-side-sub');
+      var featuresEl = loginPg.querySelector('.lp-side-features');
+      var badgeEl    = loginPg.querySelector('.lp-side-badge');
+      var logoEl     = loginPg.querySelector('.lp-side-logo');
+
+      if (s.login_side_title && titleEl)   titleEl.textContent = s.login_side_title;
+      if (s.login_side_sub   && subEl)     subEl.textContent   = s.login_side_sub;
+      if (s.login_side_badge && badgeEl)   badgeEl.textContent = s.login_side_badge;
+      if (s.login_side_features && featuresEl) {
+        try {
+          var feats = JSON.parse(s.login_side_features);
+          if (Array.isArray(feats) && feats.length) {
+            featuresEl.innerHTML = feats.map(function (f) { return '<li>' + f + '</li>'; }).join('');
+          }
+        } catch (_) {}
+      }
+      if (s.login_logo_svg && s.login_logo_svg.trim() && logoEl) {
+        logoEl.innerHTML = s.login_logo_svg;
+      }
+    }).catch(function () { /* keep HTML defaults */ });
 
   // ── SVG helpers ──────────────────────────────────────────────────────────
   var SVG_EYE_OPEN = '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>';

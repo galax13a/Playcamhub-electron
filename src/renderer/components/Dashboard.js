@@ -38,8 +38,8 @@ export async function renderDashboard(el) {
   const starchoActive = PluginRegistry.getPlugins().some(p => p.id === 'starcho');
   if (starchoActive) {
     try {
-      const stats = await API.songs.stats();
-      audioCount  = stats.audioCount ?? audioCount;
+      const stats = await API.media.stats();
+      audioCount  = stats.photoCount ?? audioCount;
       videoCount  = stats.videoCount ?? 0;
       diskText    = fmtBytes(stats.diskBytes);
     } catch (_) {}

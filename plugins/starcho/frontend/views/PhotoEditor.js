@@ -138,6 +138,19 @@ export async function renderPhotoEditor(el, extra) {
   const _origNavigate = store.navigate.bind(store);
 
   // ── Editor state ─────────────────────────────────────────────────────────
+  // Restore persisted canvas objects if present
+  let _savedElements   = [];
+  let _savedTextLayers = [];
+  if (media.editor_state) {
+    try {
+      const saved = typeof media.editor_state === 'string'
+        ? JSON.parse(media.editor_state)
+        : media.editor_state;
+      if (saved.elements)   _savedElements   = saved.elements;
+      if (saved.textLayers) _savedTextLayers = saved.textLayers;
+    } catch (_) {}
+  }
+
   const state = {
     tab:      'presets',
     preset:   { platform: '🖥️ General', name: null, w: origW, h: origH },
@@ -148,21 +161,63 @@ export async function renderPhotoEditor(el, extra) {
     flipV:    false,
     focus:    { enabled: false, x: 0.5, y: 0.5, radius: 0.27, blur: 12, shape: 'circle' },
     blurBrush: { radius: 40, strength: 14 },
-    blurMask:  null,          // canvas same dims as srcImg; white = blur zone
+    blurMask:  null,
     blurMaskHasContent: false,
     blurBrushPainting: false,
-    crop:     null,           // { sx, sy, sw, sh } in source-image pixels; null = no crop
-    cropDrag: null,           // drag state while drawing crop rect
-    textLayers:  [],
+    crop:     null,
+    cropDrag: null,
+    textLayers:  _savedTextLayers,
     loadedFonts: [],
     nextId:   1,
     selTextId:null,
     dragging: null,
-    cinema:   null,           // { letterbox, vignette, grade }
-    bgRemoved: null,          // canvas with transparent background
-    elements: [],             // array of element objects
-    selectedElement: null,    // index of selected element
+    cinema:   null,
+    bgRemoved: null,
+    elements: _savedElements,
+    selectedElement: null,
   };
+
+  // ── Undo/Redo ─────────────────────────────────────────────────────────────
+  const _undoStack = [];
+  const _redoStack = [];
+  function _pushUndo() {
+    _undoStack.push(JSON.stringify({ elements: state.elements, textLayers: state.textLayers }));
+    if (_undoStack.length > 50) _undoStack.shift();
+    _redoStack.length = 0;
+    _updateUndoButtons();
+  }
+  function _undo() {
+    if (!_undoStack.length) return;
+    _redoStack.push(JSON.stringify({ elements: state.elements, textLayers: state.textLayers }));
+    const prev = JSON.parse(_undoStack.pop());
+    state.elements   = prev.elements   || [];
+    state.textLayers = prev.textLayers || [];
+    state.selectedElement = null;
+    setDirty();
+    _refreshElementList();
+    _renderElements(elemCanvas, canvas.width, canvas.height);
+    if (state.tab === 'text') buildTextPanel();
+    _updateUndoButtons();
+  }
+  function _redo() {
+    if (!_redoStack.length) return;
+    _undoStack.push(JSON.stringify({ elements: state.elements, textLayers: state.textLayers }));
+    const next = JSON.parse(_redoStack.pop());
+    state.elements   = next.elements   || [];
+    state.textLayers = next.textLayers || [];
+    state.selectedElement = null;
+    setDirty();
+    _refreshElementList();
+    _renderElements(elemCanvas, canvas.width, canvas.height);
+    if (state.tab === 'text') buildTextPanel();
+    _updateUndoButtons();
+  }
+  function _updateUndoButtons() {
+    const undoBtn = document.getElementById('pe-undo');
+    const redoBtn = document.getElementById('pe-redo');
+    if (undoBtn) undoBtn.disabled = _undoStack.length === 0;
+    if (redoBtn) redoBtn.disabled = _redoStack.length === 0;
+  }
 
   let isDirty = false;
   function setDirty() { isDirty = true; }
@@ -217,8 +272,11 @@ export async function renderPhotoEditor(el, extra) {
       <span id="pe-dim" style="font-size:11px;color:var(--text-muted);line-height:28px">
         ${origW}×${origH}px
       </span>
+      <button class="btn btn-sm btn-secondary" id="pe-undo" disabled title="Deshacer (Ctrl+Z)">↩ Deshacer</button>
+      <button class="btn btn-sm btn-secondary" id="pe-redo" disabled title="Rehacer (Ctrl+Y)">↪ Rehacer</button>
       <button class="btn btn-sm btn-secondary" id="pe-reset">↺ Reset</button>
       <button class="btn btn-sm btn-secondary" id="pe-dl">⬇️ Descargar</button>
+      <button class="btn btn-sm btn-secondary" id="pe-save-state" title="Guarda los elementos del canvas para reeditarlos luego">📌 Guardar estado</button>
       <button class="btn btn-sm btn-primary"   id="pe-save">💾 Guardar</button>
     </div>
   `;
@@ -450,7 +508,7 @@ export async function renderPhotoEditor(el, extra) {
     const py   = t.y * H;
     const size = Math.round(t.size * (W / origW));
     ctx.save();
-    ctx.font = `${t.italic ? 'italic ' : ''}${t.bold ? 'bold ' : ''}${size}px ${t.font}`;
+    ctx.font = `${t.italic ? 'italic ' : ''}${t.bold ? 'bold ' : ''}${size}px ${t.font || 'Arial'}`;
     ctx.textAlign = t.align || 'center';
     ctx.textBaseline = 'middle';
     if (t.shadow) {
@@ -460,7 +518,18 @@ export async function renderPhotoEditor(el, extra) {
       ctx.shadowOffsetY = 2;
     }
     ctx.fillStyle = t.color;
-    ctx.fillText(t.text || '', px, py);
+    if (t.letterSpacing) { try { ctx.letterSpacing = t.letterSpacing + 'px'; } catch (_) {} }
+    if (t.vertical) {
+      const chars = [...(t.text || '')];
+      const lineH = size * 1.2;
+      const totalH = chars.length * lineH;
+      chars.forEach((ch, ci) => {
+        ctx.fillText(ch, px, py + ci * lineH - totalH / 2 + lineH / 2);
+      });
+    } else {
+      ctx.fillText(t.text || '', px, py);
+    }
+    try { ctx.letterSpacing = '0px'; } catch (_) {}
     ctx.restore();
   }
 
@@ -476,11 +545,13 @@ export async function renderPhotoEditor(el, extra) {
         left:${t.x * 100}%;top:${t.y * 100}%;
         font-size:${t.size * (dispW / origW)}px;
         color:${t.color};
-        font-family:${t.font};
+        font-family:${t.font || 'Arial'};
         font-weight:${t.bold ? 'bold' : 'normal'};
         font-style:${t.italic ? 'italic' : 'normal'};
         text-shadow:${t.shadow ? '0 2px 6px rgba(0,0,0,.8)' : 'none'};
         text-align:${t.align || 'center'};
+        letter-spacing:${t.letterSpacing || 0}px;
+        writing-mode:${t.vertical ? 'vertical-rl' : 'horizontal-tb'};
       `;
       h.textContent = t.text || ' ';
 
@@ -901,14 +972,20 @@ export async function renderPhotoEditor(el, extra) {
                 style="flex-shrink:0;padding:0 10px;font-size:16px">📂</button>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button id="txt-bold"   class="btn btn-sm ${sel.bold   ? 'btn-primary':'btn-secondary'}" style="font-weight:900">B</button>
-        <button id="txt-italic" class="btn btn-sm ${sel.italic ? 'btn-primary':'btn-secondary'}" style="font-style:italic">I</button>
-        <button id="txt-shadow" class="btn btn-sm ${sel.shadow ? 'btn-primary':'btn-secondary'}">◈ Sombra</button>
+        <button id="txt-bold"     class="btn btn-sm ${sel.bold     ? 'btn-primary':'btn-secondary'}" style="font-weight:900">B</button>
+        <button id="txt-italic"   class="btn btn-sm ${sel.italic   ? 'btn-primary':'btn-secondary'}" style="font-style:italic">I</button>
+        <button id="txt-shadow"   class="btn btn-sm ${sel.shadow   ? 'btn-primary':'btn-secondary'}">◈ Sombra</button>
+        <button id="txt-vertical" class="btn btn-sm ${sel.vertical ? 'btn-primary':'btn-secondary'}" title="Texto vertical">⬇ V</button>
         <select id="txt-align" class="form-control" style="width:auto;font-size:12px">
           <option value="left"   ${sel.align==='left'  ?'selected':''}>← Izq</option>
           <option value="center" ${sel.align==='center'?'selected':''}>↔ Centro</option>
           <option value="right"  ${sel.align==='right' ?'selected':''}>→ Der</option>
         </select>
+      </div>
+      <div class="pe-slider-row">
+        <label>Espaciado</label>
+        <input type="range" id="txt-letter-spacing" min="0" max="30" step="1" value="${sel.letterSpacing || 0}">
+        <span class="val" id="txtv-ls">${sel.letterSpacing || 0}px</span>
       </div>
     `;
 
@@ -962,6 +1039,16 @@ export async function renderPhotoEditor(el, extra) {
       setDirty(); scheduleRender();
     });
     edDiv.querySelector('#txt-align').addEventListener('change', e => { sel.align = e.target.value; setDirty(); scheduleRender(); });
+    edDiv.querySelector('#txt-vertical').addEventListener('click', () => {
+      sel.vertical = !sel.vertical;
+      edDiv.querySelector('#txt-vertical').className = `btn btn-sm ${sel.vertical ? 'btn-primary':'btn-secondary'}`;
+      setDirty(); scheduleRender();
+    });
+    edDiv.querySelector('#txt-letter-spacing').addEventListener('input', e => {
+      sel.letterSpacing = parseInt(e.target.value) || 0;
+      edDiv.querySelector('#txtv-ls').textContent = sel.letterSpacing + 'px';
+      setDirty(); scheduleRender();
+    });
 
     panel.appendChild(edDiv);
   }
@@ -1216,6 +1303,29 @@ export async function renderPhotoEditor(el, extra) {
 
   // ── Wire header buttons ───────────────────────────────────────────────────
   header.querySelector('#pe-back').addEventListener('click', () => store.navigate('starcho:gallery'));
+
+  header.querySelector('#pe-undo').addEventListener('click', _undo);
+  header.querySelector('#pe-redo').addEventListener('click', _redo);
+
+  // Keyboard shortcuts for undo/redo
+  el.setAttribute('tabindex', '-1');
+  el.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) { _undo(); e.preventDefault(); }
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) { _redo(); e.preventDefault(); }
+  });
+
+  header.querySelector('#pe-save-state').addEventListener('click', async () => {
+    const btn = header.querySelector('#pe-save-state');
+    btn.disabled = true;
+    btn.textContent = '⏳…';
+    try {
+      await API.media.saveEditorState(mediaId, { elements: state.elements, textLayers: state.textLayers });
+      showToast('📌 Estado del canvas guardado');
+    } catch (err) {
+      showToast('Error guardando estado: ' + err.message, 'error');
+    } finally { btn.disabled = false; btn.textContent = '📌 Guardar estado'; }
+  });
 
   header.querySelector('#pe-reset').addEventListener('click', () => {
     state.filter = 'normal';
@@ -1603,11 +1713,24 @@ export async function renderPhotoEditor(el, extra) {
       }
 
       if (elObj.type === 'text') {
-        eCtx.font         = `bold ${elObj.fontSize}px sans-serif`;
+        eCtx.font         = `bold ${elObj.fontSize}px ${elObj.font || 'sans-serif'}`;
         eCtx.fillStyle    = elObj.color;
         eCtx.textAlign    = 'center';
         eCtx.textBaseline = 'middle';
-        eCtx.fillText(elObj.content, 0, 0);
+        if (elObj.letterSpacing) {
+          try { eCtx.letterSpacing = elObj.letterSpacing + 'px'; } catch (_) {}
+        }
+        if (elObj.vertical) {
+          const chars = [...(elObj.content || '')];
+          const lineH = elObj.fontSize * 1.2;
+          const totalH = chars.length * lineH;
+          chars.forEach((ch, ci) => {
+            eCtx.fillText(ch, 0, ci * lineH - totalH / 2 + lineH / 2);
+          });
+        } else {
+          eCtx.fillText(elObj.content, 0, 0);
+        }
+        try { eCtx.letterSpacing = '0px'; } catch (_) {}
       } else if (elObj.type === 'emoji') {
         eCtx.font         = `${elObj.fontSize}px serif`;
         eCtx.textAlign    = 'center';
@@ -1643,9 +1766,13 @@ export async function renderPhotoEditor(el, extra) {
         background:var(--bg-3);cursor:pointer;border:1px solid ${i === state.selectedElement ? 'var(--accent)' : 'transparent'};`;
       const icon = elObj.type === 'text' ? 'T' : elObj.type === 'emoji' ? elObj.content : '◼';
       const preview = elObj.type === 'text' ? elObj.content.slice(0, 12) : elObj.content;
+      const editBtn = elObj.type === 'text'
+        ? `<button data-edit="${i}" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:13px;padding:2px" title="Editar texto">✏</button>`
+        : '';
       item.innerHTML = `
         <span style="font-size:13px;min-width:18px;text-align:center">${icon}</span>
         <span style="flex:1;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text-muted)">${esc(preview)}</span>
+        ${editBtn}
         <button data-scale="0.8"  style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:11px;padding:2px" title="Reducir">🔽</button>
         <button data-scale="1.25" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:11px;padding:2px" title="Agrandar">🔼</button>
         <button data-rot="-15" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:12px;padding:2px">↩</button>
@@ -1653,7 +1780,21 @@ export async function renderPhotoEditor(el, extra) {
         <button data-del="${i}"  style="background:none;border:none;color:#FF5555;cursor:pointer;font-size:14px;padding:2px">✕</button>
       `;
       item.addEventListener('click', e => {
+        if (e.target.dataset.edit !== undefined) {
+          const idx = parseInt(e.target.dataset.edit);
+          const el2 = state.elements[idx];
+          const newText = prompt('Editar texto:', el2.content);
+          if (newText !== null) {
+            _pushUndo();
+            el2.content = newText;
+            setDirty();
+            _refreshElementList();
+            _renderElements(elemCanvas, canvas.width, canvas.height);
+          }
+          return;
+        }
         if (e.target.dataset.del !== undefined) {
+          _pushUndo();
           const idx = parseInt(e.target.dataset.del);
           state.elements.splice(idx, 1);
           if (state.selectedElement >= state.elements.length) state.selectedElement = null;
@@ -1663,6 +1804,7 @@ export async function renderPhotoEditor(el, extra) {
           return;
         }
         if (e.target.dataset.scale !== undefined) {
+          _pushUndo();
           state.elements[i].scale = Math.max(0.1, Math.min(10, state.elements[i].scale * parseFloat(e.target.dataset.scale)));
           setDirty();
           _refreshElementList();
@@ -1670,6 +1812,7 @@ export async function renderPhotoEditor(el, extra) {
           return;
         }
         if (e.target.dataset.rot !== undefined) {
+          _pushUndo();
           const deg = parseInt(e.target.dataset.rot);
           state.elements[i].rotation = (state.elements[i].rotation + deg + 360) % 360;
           setDirty();
@@ -1785,19 +1928,46 @@ export async function renderPhotoEditor(el, extra) {
       <input type="text" class="form-control" id="el-text-inp" placeholder="Escribe aquí..." style="width:100%;margin-bottom:8px">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
         <div>
-          <label style="font-size:11px;color:var(--text-muted)">Tamaño</label>
-          <input type="range" id="el-font-size" min="12" max="200" value="40" style="width:100%">
-        </div>
-        <div>
           <label style="font-size:11px;color:var(--text-muted)">Color</label>
           <input type="color" id="el-text-color" value="#ffffff" style="width:100%;height:36px;border-radius:6px;border:none">
         </div>
+        <div>
+          <label style="font-size:11px;color:var(--text-muted)">Fuente</label>
+          <select id="el-text-font" class="form-control" style="font-size:11px;width:100%">
+            ${['Arial','Arial Black','Georgia','Impact','Verdana','Courier New','Times New Roman'].map(f=>`<option>${f}</option>`).join('')}
+          </select>
+        </div>
       </div>
-      <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;margin-bottom:8px">
-        <input type="checkbox" id="el-text-shadow"> Sombra
-      </label>
+      <div style="margin-bottom:6px">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+          <label style="font-size:11px;color:var(--text-muted);flex:1">Tamaño</label>
+          <span id="el-font-size-val" style="font-size:11px;color:var(--text-muted);min-width:36px;text-align:right">40px</span>
+        </div>
+        <input type="range" id="el-font-size" min="12" max="300" value="40" style="width:100%">
+      </div>
+      <div style="margin-bottom:6px">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+          <label style="font-size:11px;color:var(--text-muted);flex:1">Espaciado letras</label>
+          <span id="el-letter-spacing-val" style="font-size:11px;color:var(--text-muted);min-width:36px;text-align:right">0px</span>
+        </div>
+        <input type="range" id="el-letter-spacing" min="0" max="30" value="0" style="width:100%">
+      </div>
+      <div style="display:flex;gap:10px;margin-bottom:8px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
+          <input type="checkbox" id="el-text-shadow"> Sombra
+        </label>
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
+          <input type="checkbox" id="el-text-vertical"> Vertical
+        </label>
+      </div>
       <button class="btn btn-sm btn-primary" id="el-add-text" style="width:100%">➕ Agregar texto</button>
     `;
+    textPanel.querySelector('#el-font-size').addEventListener('input', e => {
+      textPanel.querySelector('#el-font-size-val').textContent = e.target.value + 'px';
+    });
+    textPanel.querySelector('#el-letter-spacing').addEventListener('input', e => {
+      textPanel.querySelector('#el-letter-spacing-val').textContent = e.target.value + 'px';
+    });
     wrap.appendChild(textPanel);
 
     // ── Shape sub-panel ──
@@ -1825,13 +1995,21 @@ export async function renderPhotoEditor(el, extra) {
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
         <div><label style="font-size:11px;color:var(--text-muted)">Relleno</label>
              <input type="color" id="el-shape-color" value="#ffffff" style="width:100%;height:36px;border-radius:6px;border:none"></div>
-        <div><label style="font-size:11px;color:var(--text-muted)">Tamaño</label>
-             <input type="range" id="el-shape-size" min="20" max="300" value="80" style="width:100%"></div>
+        <div>
+          <div style="display:flex;justify-content:space-between">
+            <label style="font-size:11px;color:var(--text-muted)">Tamaño</label>
+            <span id="el-shape-size-val" style="font-size:11px;color:var(--text-muted)">80px</span>
+          </div>
+          <input type="range" id="el-shape-size" min="20" max="300" value="80" style="width:100%">
+        </div>
       </div>
       <div><label style="font-size:11px;color:var(--text-muted);margin-bottom:4px;display:block">Borde</label>
            <input type="range" id="el-shape-stroke" min="0" max="20" value="0" style="width:100%"></div>
       <button class="btn btn-sm btn-primary" id="el-add-shape" style="width:100%;margin-top:8px">➕ Agregar forma</button>
     `;
+    shapeControls.querySelector('#el-shape-size').addEventListener('input', e => {
+      shapeControls.querySelector('#el-shape-size-val').textContent = e.target.value + 'px';
+    });
     shapePanel.appendChild(shapeControls);
     wrap.appendChild(shapePanel);
 
@@ -1895,13 +2073,17 @@ export async function renderPhotoEditor(el, extra) {
 
     // Wire text add
     wrap.querySelector('#el-add-text').addEventListener('click', () => {
-      const content = wrap.querySelector('#el-text-inp').value.trim() || 'Texto';
-      const fontSize = parseInt(wrap.querySelector('#el-font-size').value);
-      const color    = wrap.querySelector('#el-text-color').value;
-      const shadow   = wrap.querySelector('#el-text-shadow').checked;
+      const content       = wrap.querySelector('#el-text-inp').value.trim() || 'Texto';
+      const fontSize      = parseInt(wrap.querySelector('#el-font-size').value);
+      const color         = wrap.querySelector('#el-text-color').value;
+      const shadow        = wrap.querySelector('#el-text-shadow').checked;
+      const vertical      = wrap.querySelector('#el-text-vertical').checked;
+      const letterSpacing = parseInt(wrap.querySelector('#el-letter-spacing').value) || 0;
+      const font          = wrap.querySelector('#el-text-font').value || 'Arial';
+      _pushUndo();
       state.elements.push({
         type: 'text', x: 0.5, y: 0.5, rotation: 0, scale: 1,
-        content, color, fontSize, strokeColor: '#000000', strokeWidth: 0, shadow,
+        content, color, fontSize, font, strokeColor: '#000000', strokeWidth: 0, shadow, vertical, letterSpacing,
       });
       state.selectedElement = state.elements.length - 1;
       setDirty();
@@ -1914,6 +2096,7 @@ export async function renderPhotoEditor(el, extra) {
       const color       = shapePanel.querySelector('#el-shape-color').value;
       const fontSize    = parseInt(shapePanel.querySelector('#el-shape-size').value);
       const strokeWidth = parseInt(shapePanel.querySelector('#el-shape-stroke').value);
+      _pushUndo();
       state.elements.push({
         type: 'shape', x: 0.5, y: 0.5, rotation: 0, scale: 1,
         content: selectedShape, color, fontSize, strokeColor: '#000000', strokeWidth, shadow: false,
@@ -1928,6 +2111,7 @@ export async function renderPhotoEditor(el, extra) {
     emojiPanel.querySelector('#el-add-emoji').addEventListener('click', () => {
       const content  = emojiPanel.querySelector('#el-emoji-custom').value.trim() || selectedEmoji;
       const fontSize = parseInt(emojiPanel.querySelector('#el-emoji-size').value);
+      _pushUndo();
       state.elements.push({
         type: 'emoji', x: 0.5, y: 0.5, rotation: 0, scale: 1,
         content, color: '#ffffff', fontSize, strokeColor: '#000000', strokeWidth: 0, shadow: false,
@@ -1940,6 +2124,7 @@ export async function renderPhotoEditor(el, extra) {
 
     // Wire clear all
     wrap.querySelector('#el-clear-all').addEventListener('click', () => {
+      _pushUndo();
       state.elements = [];
       state.selectedElement = null;
       setDirty();

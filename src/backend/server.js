@@ -29,7 +29,8 @@ async function startServer(appPaths, preferredPort) {
     res.sendFile(path.join(__dirname, '..', '..', 'assets', 'icons', 'icon.png'));
   });
 
-  // Attach appPaths to every request
+  // Attach appPaths and db to every request
+  expressApp.set('db', db);
   expressApp.use((req, _res, next) => { req.appPaths = appPaths; next(); });
 
   // 3. Build API router (core routes only)

@@ -1,9 +1,9 @@
 {
   "id":          "starcho",
-  "name":        "Starcho",
-  "version":     "1.0.0",
-  "description": "Music player plugin — YouTube search, local library, playlists, categories and download manager.",
-  "author":      "Starcho Dev",
-  "icon":        "🎵",
-  "color":       "#7B2FBE"
+  "name":        "MediaHub",
+  "version":     "2.0.0",
+  "description": "Multimedia manager for content creators — upload, organize, edit and play photos, videos and albums with professional tools.",
+  "author":      "PlaycamHub Dev",
+  "icon":        "🎬",
+  "color":       "#FF6B35"
 }
