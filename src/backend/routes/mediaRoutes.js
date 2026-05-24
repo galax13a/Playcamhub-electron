@@ -224,16 +224,20 @@ router.post('/:id/edit', async (req, res) => {
     const newPath  = `${base}.webp`;
     const newThumb = `${base}_thumb.webp`;
 
+    // Read actual file dimensions first — DB values may lag after a previous edit
+    const srcMeta = await sharp(m.file_path).metadata();
+    const srcW    = srcMeta.width  || 99999;
+    const srcH    = srcMeta.height || 99999;
+
     let pipeline = sharp(m.file_path);
 
-    // 1. Crop first (before rotation/resize so coordinates match original pixels)
+    // 1. Crop first (coordinates must be clamped to actual image bounds or Sharp throws)
     if (crop && parseInt(crop.w) > 0 && parseInt(crop.h) > 0) {
-      pipeline = pipeline.extract({
-        left:   Math.max(0, parseInt(crop.x) || 0),
-        top:    Math.max(0, parseInt(crop.y) || 0),
-        width:  Math.max(1, parseInt(crop.w)),
-        height: Math.max(1, parseInt(crop.h)),
-      });
+      const cx = Math.max(0, Math.min(parseInt(crop.x) || 0, srcW - 1));
+      const cy = Math.max(0, Math.min(parseInt(crop.y) || 0, srcH - 1));
+      const cw = Math.max(1, Math.min(parseInt(crop.w), srcW - cx));
+      const ch = Math.max(1, Math.min(parseInt(crop.h), srcH - cy));
+      pipeline = pipeline.extract({ left: cx, top: cy, width: cw, height: ch });
     }
 
     // 2. Rotation
@@ -241,10 +245,10 @@ router.post('/:id/edit', async (req, res) => {
       pipeline = pipeline.rotate(parseInt(rotation));
     }
 
-    // 3. Resize (width and/or height)
+    // 3. Resize — only if the caller explicitly requested dimensions smaller than source
     const rw = parseInt(width);
     const rh = parseInt(height);
-    if (rw > 0 || rh > 0) {
+    if ((rw > 0 && rw < srcW) || (rh > 0 && rh < srcH)) {
       pipeline = pipeline.resize(
         rw > 0 ? rw : null,
         rh > 0 ? rh : null,

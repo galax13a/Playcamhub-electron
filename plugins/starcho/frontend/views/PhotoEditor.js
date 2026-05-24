@@ -131,30 +131,38 @@ export async function renderPhotoEditor(el, extra) {
       rs.appendChild(rb);
       panel.appendChild(rs);
 
-      // Resize
+      // Resize — inline form groups, no _field helper needed
       const rz = _sec('RESIZE');
-
-      const wWrap = _field('Width');
-      const wInp  = _numInput({ id: 'pe-rw', value: state.resize.w, min: 10, max: origW * 4 });
-      wWrap.appendChild(wInp);
-      wWrap.insertAdjacentHTML('beforeend', '<span style="font-size:11px;color:var(--text-muted)">px</span>');
-      rz.appendChild(wWrap);
-
-      const hWrap = _field('Height');
-      const hInp  = _numInput({ id: 'pe-rh', value: state.resize.h, min: 10, max: origH * 4 });
-      hWrap.appendChild(hInp);
-      hWrap.insertAdjacentHTML('beforeend', '<span style="font-size:11px;color:var(--text-muted)">px</span>');
-      rz.appendChild(hWrap);
-
-      const lockLabel = document.createElement('label');
-      lockLabel.style.cssText = 'display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted);cursor:pointer;';
-      lockLabel.innerHTML = `<input type="checkbox" id="pe-lock" ${state.resize.lock ? 'checked' : ''}> Lock aspect ratio`;
-      rz.appendChild(lockLabel);
+      rz.insertAdjacentHTML('beforeend', `
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <label style="font-size:11px;color:var(--text-muted);">Width</label>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <input id="pe-rw" type="number" class="form-control" style="flex:1;min-width:0;"
+                     min="10" max="${origW * 4}" value="${state.resize.w}">
+              <span style="font-size:11px;color:var(--text-muted);">px</span>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px;">
+            <label style="font-size:11px;color:var(--text-muted);">Height</label>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <input id="pe-rh" type="number" class="form-control" style="flex:1;min-width:0;"
+                     min="10" max="${origH * 4}" value="${state.resize.h}">
+              <span style="font-size:11px;color:var(--text-muted);">px</span>
+            </div>
+          </div>
+          <label style="display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-muted);cursor:pointer;">
+            <input type="checkbox" id="pe-lock" ${state.resize.lock ? 'checked' : ''}> Lock aspect ratio
+          </label>
+        </div>
+      `);
       panel.appendChild(rz);
 
+      const wInp   = rz.querySelector('#pe-rw');
+      const hInp   = rz.querySelector('#pe-rh');
       const lockChk = rz.querySelector('#pe-lock');
-      lockChk.addEventListener('change', () => { state.resize.lock = lockChk.checked; });
 
+      lockChk.addEventListener('change', () => { state.resize.lock = lockChk.checked; });
       wInp.addEventListener('input', () => {
         state.resize.w = parseInt(wInp.value) || origW;
         if (state.resize.lock) { state.resize.h = Math.round(state.resize.w * aspect); hInp.value = state.resize.h; }
@@ -498,10 +506,12 @@ export async function renderPhotoEditor(el, extra) {
       const btn = el.querySelector('#pe-save');
       btn.disabled = true; btn.textContent = '⏳ Saving…';
       try {
+        // Only send resize dimensions if the user actually changed them — avoids
+        // Sharp upscaling a cropped region back to the original image size.
+        const resizeChanged = state.resize.w !== origW || state.resize.h !== origH;
         await API.media.edit(mediaId, {
           rotation: state.rotation,
-          width:    state.resize.w,
-          height:   state.resize.h,
+          ...(resizeChanged ? { width: state.resize.w, height: state.resize.h } : {}),
           crop:     state.crop,
           effects:  state.effects,
           quality:  'high',
@@ -575,9 +585,11 @@ function _btn(label) {
 function _field(label) {
   const d = document.createElement('div');
   d.style.cssText = 'display:flex;flex-direction:column;gap:4px;';
-  d.innerHTML = `<label style="font-size:11px;color:var(--text-muted)">${label}</label>
-    <div style="display:flex;align-items:center;gap:6px;">`;
-  return d;
+  d.innerHTML = `<label style="font-size:11px;color:var(--text-muted)">${label}</label>`;
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;align-items:center;gap:6px;';
+  d.appendChild(row);
+  return d; // caller appends inputs into d, which go after the label
 }
 
 function _numInput(attrs) {
