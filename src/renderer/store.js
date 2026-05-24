@@ -27,7 +27,7 @@ const store = {
     downloadQueue:[],
     history:      [],
     settings:     {},
-    appConfig:    { appName: 'StarchoElectron', appSlogan: 'Starkit para apps Electron', appVersion: '1.0.0', logoText: 'Starcho', appTitle: 'StarchoElectron — Dev Platform' },
+    appConfig:    { appName: 'PlaycamHub Studio', appSlogan: 'Plataforma Multimedia para Creators', appVersion: '1.0.1', logoText: 'PlaycamHub', appTitle: 'PlaycamHub Studio' },
     loggedUser:   null,
   },
 
@@ -76,12 +76,14 @@ const store = {
   },
 
   async loadSettings() {
-    const s = await API.settings.getAll();
-    this.setState({ settings: s });
-    if (s.theme)    this.applyTheme(s.theme);
-    if (s.volume)   this.setState({ volume: Number(s.volume) / 100 });
-    if (s.language) { setLang(s.language); }  // no emit here — router not ready yet at boot
-    return s;
+    try {
+      const s = await API.settings.getAll();
+      this.setState({ settings: s });
+      if (s.theme)    this.applyTheme(s.theme);
+      if (s.volume)   this.setState({ volume: Number(s.volume) / 100 });
+      if (s.language) { setLang(s.language); }
+      return s;
+    } catch (_) { return {}; }
   },
 
   async loadUserProfile() {
@@ -178,7 +180,8 @@ const store = {
   applyTheme(theme) {
     document.documentElement.setAttribute('data-theme', theme);
     this.setState({ theme });
-    API.settings.setMany({ theme }).catch(() => {});
+    // Only persist to DB when logged in (boot() calls this without auth → 401 otherwise)
+    if (this.state.loggedUser) API.settings.setMany({ theme }).catch(() => {});
   },
 
   // ── Navigation ─────────────────────────────────────────────────────────────

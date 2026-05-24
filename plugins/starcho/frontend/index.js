@@ -1,50 +1,53 @@
 /**
- * Starcho plugin — frontend registration.
+ * MediaHub plugin (formerly Starcho) — frontend registration.
  *
  * Contributes:
- *  - 4 sidebar nav items (Library, YouTube, Import, History)
+ *  - 4 sidebar nav items (Gallery, Albums, Upload, Favorites)
  *    Each item has a labelKey so the Sidebar can translate the label via i18n.t()
  *    when the language changes — no rebuild of the plugin is needed.
- *  - 5 view renderers (library, youtube, upload, history, playlist)
- *  - 3 dashboard widgets:
- *      • starcho-now-playing  zone:header  priority:100  — transport controls for current song
- *      • starcho-library-card zone:content priority:100  — song/playlist count + disk usage
- *      • starcho-youtube-card zone:content priority:90   — queue stats + quick-add URL input
+ *  - 4 view renderers (gallery, albums, upload, photo editor)
+ *  - 2 dashboard widgets:
+ *      • mediahub-stats       zone:content priority:100  — media count + disk usage
+ *      • mediahub-quick-upload zone:content priority:90   — quick upload input
  */
-import store from '../../../src/renderer/store.js';
-import API   from '../../../src/renderer/utils/api.js';
+import store             from '../../../src/renderer/store.js';
+import API, { getBase } from '../../../src/renderer/utils/api.js';
 
 export default {
   id: 'starcho',
-  hasSidebarPlaylists: true,
+  hasSidebarPlaylists: false,
 
   navItems: [
-    { view: 'starcho:library',  icon: '🎵', labelKey: 'nav_library',  label: 'Library'  },
-    { view: 'starcho:youtube',  icon: '📥', labelKey: 'nav_youtube',  label: 'YouTube'  },
-    { view: 'starcho:upload',   icon: '📂', labelKey: 'nav_import',   label: 'Import'   },
-    { view: 'starcho:history',  icon: '🕐', labelKey: 'nav_history',  label: 'History'  },
+    { view: 'starcho:gallery',  icon: '🖼️', labelKey: 'nav_gallery',   label: 'Gallery'   },
+    { view: 'starcho:albums',   icon: '📁', labelKey: 'nav_albums',    label: 'Albums'    },
+    { view: 'starcho:upload',   icon: '📤', labelKey: 'nav_upload',    label: 'Upload'    },
+    { view: 'starcho:favorites',icon: '⭐', labelKey: 'nav_favorites', label: 'Favorites' },
   ],
 
   views: {
-    'starcho:library': async (el, extra) => {
-      const { renderLibrary } = await import('../../../src/renderer/components/Library.js');
-      renderLibrary(el, extra);
+    'starcho:gallery': async (el, extra) => {
+      const { renderGallery } = await import('./views/Gallery.js');
+      renderGallery(el, extra);
     },
-    'starcho:youtube': async (el) => {
-      const { renderYouTubeDashboard } = await import('../../../src/renderer/components/Search.js');
-      renderYouTubeDashboard(el);
+    'starcho:albums': async (el, extra) => {
+      const { renderAlbums } = await import('./views/Albums.js');
+      renderAlbums(el, extra);
     },
     'starcho:upload': async (el, extra) => {
-      const { renderUpload } = await import('../../../src/renderer/components/Upload.js');
+      const { renderUpload } = await import('./views/Upload.js');
       renderUpload(el, extra);
     },
-    'starcho:history': async (el, extra) => {
-      const { renderHistory } = await import('../../../src/renderer/components/History.js');
-      renderHistory(el, extra);
+    'starcho:favorites': async (el, extra) => {
+      const { renderFavorites } = await import('./views/Favorites.js');
+      renderFavorites(el, extra);
     },
-    'starcho:playlist': async (el, extra) => {
-      const { renderPlaylistView } = await import('../../../src/renderer/components/PlaylistView.js');
-      renderPlaylistView(el, extra);
+    'starcho:photo-editor': async (el, extra) => {
+      const { renderPhotoEditor } = await import('./views/PhotoEditor.js');
+      renderPhotoEditor(el, extra);
+    },
+    'starcho:video-viewer': async (el, extra) => {
+      const { renderVideoViewer } = await import('./views/VideoViewer.js');
+      renderVideoViewer(el, extra);
     },
   },
 
@@ -52,133 +55,90 @@ export default {
 
   dashboardWidgets: [
 
-    // Header zone: currently playing song with transport controls
+    // Content zone: MediaHub stats
     {
-      id:       'starcho-now-playing',
-      zone:     'header',
-      priority: 100,
-      title:    '🎵 Reproduciendo ahora',
-      async render(el) {
-        const song = store.state.currentSong;
-
-        if (!song) {
-          el.innerHTML = `
-            <div style="display:flex;align-items:center;gap:14px;padding:4px 0">
-              <span style="font-size:28px">🎶</span>
-              <div>
-                <div style="font-size:13px;font-weight:600;color:var(--text-primary)">Sin música activa</div>
-                <div style="font-size:12px;color:var(--text-muted);margin-top:2px">Ve a Biblioteca para comenzar</div>
-              </div>
-              <button class="btn btn-sm btn-primary" style="margin-left:auto" id="sbtn-goto-lib">
-                Ir a Biblioteca
-              </button>
-            </div>`;
-          el.querySelector('#sbtn-goto-lib')?.addEventListener('click', () =>
-            store.navigate('starcho:library'));
-          return;
-        }
-
-        const thumb = song.thumbnail ? API.thumbnailUrl(song.thumbnail) : '';
-        el.innerHTML = `
-          <div style="display:flex;align-items:center;gap:14px;padding:4px 0">
-            ${thumb
-              ? `<img src="${_esc(thumb)}" width="48" height="48"
-                      style="border-radius:8px;object-fit:cover;flex-shrink:0" data-err="bg">`
-              : `<div style="width:48px;height:48px;border-radius:8px;background:var(--bg-3);
-                             display:flex;align-items:center;justify-content:center;font-size:22px">🎵</div>`}
-            <div style="flex:1;min-width:0">
-              <div style="font-size:14px;font-weight:700;color:var(--text-primary);
-                          white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-                ${_esc(song.title || song.filename || '—')}
-              </div>
-              <div style="font-size:12px;color:var(--text-muted);margin-top:2px">
-                ${_esc(song.artist || 'Artista desconocido')}
-              </div>
-            </div>
-            <div style="display:flex;gap:8px;flex-shrink:0">
-              <button class="btn btn-sm btn-secondary" id="sw-prev">⏮</button>
-              <button class="btn btn-sm btn-primary"   id="sw-play">${store.state.isPlaying ? '⏸' : '▶'}</button>
-              <button class="btn btn-sm btn-secondary" id="sw-next">⏭</button>
-            </div>
-          </div>`;
-
-        el.querySelector('#sw-prev')?.addEventListener('click', () => store.prevSong());
-        el.querySelector('#sw-play')?.addEventListener('click', () => store.togglePlay());
-        el.querySelector('#sw-next')?.addEventListener('click', () => store.nextSong());
-      },
-    },
-
-    // Content zone: library overview stats
-    {
-      id:       'starcho-library-card',
+      id:       'mediahub-stats',
       zone:     'content',
       priority: 100,
-      title:    '🎵 Biblioteca',
+      title:    '🖼️ MediaHub',
       async render(el) {
-        const songs     = store.state.songs     || [];
-        const playlists = store.state.playlists || [];
-        const queue     = store.state.downloadQueue || [];
-        const pending   = queue.filter(i => ['downloading', 'pending'].includes(i.status)).length;
-
+        let totalPhotos = 0;
+        let totalVideos = 0;
         let diskText = '—';
+
         try {
-          const stats = await API.songs.stats();
-          diskText    = _fmtBytes(stats.diskBytes);
-        } catch (_) {}
+          const stats = await API.media.stats();
+          totalPhotos = stats.photoCount || 0;
+          totalVideos = stats.videoCount || 0;
+          diskText    = _fmtBytes(stats.diskBytes || 0);
+        } catch (_) {
+          // Fallback silently
+        }
 
         el.innerHTML = `
           <div style="display:flex;flex-direction:column;gap:10px">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-              ${_statRow('🎵', 'Canciones',  songs.length)}
-              ${_statRow('📋', 'Playlists',  playlists.length)}
-              ${_statRow('💾', 'En disco',   diskText)}
-              ${_statRow('📥', 'Pendientes', pending)}
+              ${_statRow('🖼️', 'Photos',  totalPhotos)}
+              ${_statRow('🎬', 'Videos',  totalVideos)}
+              ${_statRow('💾', 'Storage', diskText)}
+              ${_statRow('📁', 'Albums',  0)}
             </div>
-            <button class="btn btn-sm btn-primary" style="width:100%;margin-top:2px" id="sbtn-lib">
-              Abrir Biblioteca
+            <button class="btn btn-sm btn-primary" style="width:100%;margin-top:2px" id="sbtn-gallery">
+              Open Gallery
             </button>
           </div>`;
 
-        el.querySelector('#sbtn-lib')?.addEventListener('click', () =>
-          store.navigate('starcho:library'));
+        el.querySelector('#sbtn-gallery')?.addEventListener('click', () =>
+          store.navigate('starcho:gallery'));
       },
     },
 
-    // Content zone: YouTube quick-add card
+    // Content zone: Quick upload
     {
-      id:       'starcho-youtube-card',
+      id:       'mediahub-quick-upload',
       zone:     'content',
       priority: 90,
-      title:    '📥 YouTube Downloader',
+      title:    '📤 Quick Upload',
       async render(el) {
-        const queue       = store.state.downloadQueue || [];
-        const downloading = queue.filter(i => i.status === 'downloading').length;
-        const completed   = queue.filter(i => i.status === 'completed').length;
-
         el.innerHTML = `
-          <div style="display:flex;flex-direction:column;gap:10px">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-              ${_statRow('⬇️', 'Descargando', downloading)}
-              ${_statRow('✅', 'Completados', completed)}
-            </div>
-            <div style="display:flex;gap:6px;margin-top:2px">
-              <input class="form-control" id="yt-quick-url"
-                     placeholder="Pegar URL de YouTube…" style="flex:1;font-size:12px">
-              <button class="btn btn-sm btn-primary" id="yt-quick-add">MP3</button>
-            </div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <input type="file" id="mh-quick-input" style="display:none"
+                   accept="image/*,video/*" multiple>
+            <button class="btn btn-sm btn-primary" style="width:100%"
+                    id="mh-quick-btn">
+              Choose Files to Upload
+            </button>
+            <div id="mh-upload-status" style="font-size:12px;color:var(--text-muted)"></div>
           </div>`;
 
-        el.querySelector('#yt-quick-add')?.addEventListener('click', async () => {
-          const inp = el.querySelector('#yt-quick-url');
-          const url = inp.value.trim();
-          if (!url) return;
-          try {
-            await API.downloads.add(url, 'mp3');
-            inp.value = '';
-            store.navigate('starcho:youtube');
-          } catch (err) {
-            console.error('[starcho] Quick-add error:', err);
+        const fileInput = el.querySelector('#mh-quick-input');
+        const btn = el.querySelector('#mh-quick-btn');
+        const status = el.querySelector('#mh-upload-status');
+
+        btn.addEventListener('click', () => fileInput.click());
+
+        fileInput.addEventListener('change', async (e) => {
+          const files = Array.from(e.target.files || []);
+          if (!files.length) return;
+
+          btn.disabled = true;
+          let done = 0;
+
+          for (const file of files) {
+            status.textContent = `Uploading ${file.name}…`;
+            try {
+              await _xhrUpload(file);
+              done++;
+            } catch (err) {
+              status.textContent = `❌ ${err.message}`;
+              btn.disabled = false;
+              return;
+            }
           }
+
+          status.textContent = `✅ ${done} file(s) uploaded`;
+          fileInput.value = '';
+          setTimeout(() => { status.textContent = ''; btn.disabled = false; }, 2500);
         });
       },
     },
@@ -208,4 +168,22 @@ function _fmtBytes(b) {
 
 function _esc(s) {
   return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function _xhrUpload(file) {
+  return new Promise((resolve, reject) => {
+    const token = window.playcamAuthToken
+      || (() => { try { return JSON.parse(sessionStorage.getItem('auth_session') || localStorage.getItem('auth_session') || 'null')?.token; } catch (_) { return null; } })();
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${getBase()}/api/media/upload`);
+    if (token) xhr.setRequestHeader('Authorization', 'Bearer ' + token);
+    xhr.addEventListener('load', () => {
+      if (xhr.status >= 200 && xhr.status < 300) resolve(JSON.parse(xhr.responseText));
+      else { let m = `HTTP ${xhr.status}`; try { m = JSON.parse(xhr.responseText).error || m; } catch (_) {} reject(new Error(m)); }
+    });
+    xhr.addEventListener('error', () => reject(new Error('Network error')));
+    const fd = new FormData();
+    fd.append('file', file);
+    xhr.send(fd);
+  });
 }

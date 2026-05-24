@@ -86,6 +86,10 @@ export function initRouter() {
     }
   });
 
-  // Start on home dashboard
-  showView('home');
+  // Race-condition guard: if user:login fired before initRouter() (stored session
+  // validated faster than boot() completed), navigate to the last view now.
+  if (store.state.loggedUser) {
+    const lastView = (() => { try { return localStorage.getItem('last_view'); } catch (_) { return null; } })();
+    showView(lastView || 'home');
+  }
 }

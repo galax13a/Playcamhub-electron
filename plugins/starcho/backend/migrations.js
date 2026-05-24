@@ -1,102 +1,72 @@
 'use strict';
 
-// All music-related tables owned by the starcho plugin.
+// All multimedia-related tables owned by the starcho (MediaHub) plugin.
+// Supports photos, videos, albums, editing history and metadata.
 // Called once by PluginManager before routes are registered.
 
 function migrate(db) {
   db.exec(`
-    CREATE TABLE IF NOT EXISTS categories (
-      id         INTEGER PRIMARY KEY AUTOINCREMENT,
-      name       TEXT NOT NULL UNIQUE,
-      color      TEXT NOT NULL DEFAULT '#8B5CF6',
-      icon       TEXT NOT NULL DEFAULT '🎵',
-      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-
-    CREATE TABLE IF NOT EXISTS songs (
-      id           INTEGER PRIMARY KEY AUTOINCREMENT,
-      title        TEXT    NOT NULL,
-      artist       TEXT    NOT NULL DEFAULT 'Unknown',
-      album        TEXT    NOT NULL DEFAULT 'Unknown',
-      duration     INTEGER NOT NULL DEFAULT 0,
-      file_path    TEXT    UNIQUE,
-      thumbnail    TEXT,
-      youtube_url  TEXT,
-      youtube_id   TEXT    UNIQUE,
-      category_id  INTEGER REFERENCES categories(id) ON DELETE SET NULL,
-      is_favorite  INTEGER NOT NULL DEFAULT 0,
-      play_count   INTEGER NOT NULL DEFAULT 0,
-      type         TEXT    NOT NULL DEFAULT 'audio',
-      notes        TEXT    DEFAULT '',
-      added_at     DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
-
-    CREATE TABLE IF NOT EXISTS playlists (
+    CREATE TABLE IF NOT EXISTS albums (
       id          INTEGER PRIMARY KEY AUTOINCREMENT,
-      name        TEXT    NOT NULL,
-      description TEXT    NOT NULL DEFAULT '',
-      cover       TEXT,
+      name        TEXT NOT NULL,
+      description TEXT DEFAULT '',
+      cover_id    INTEGER REFERENCES media(id) ON DELETE SET NULL,
       created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at  DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
-    CREATE TABLE IF NOT EXISTS playlist_songs (
-      id          INTEGER PRIMARY KEY AUTOINCREMENT,
-      playlist_id INTEGER NOT NULL REFERENCES playlists(id)  ON DELETE CASCADE,
-      song_id     INTEGER NOT NULL REFERENCES songs(id)      ON DELETE CASCADE,
-      position    INTEGER NOT NULL DEFAULT 0,
-      added_at    DATETIME DEFAULT CURRENT_TIMESTAMP,
-      UNIQUE (playlist_id, song_id)
+    CREATE TABLE IF NOT EXISTS media (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      file_name       TEXT NOT NULL,
+      file_path       TEXT UNIQUE NOT NULL,
+      file_size       INTEGER NOT NULL DEFAULT 0,
+      mime_type       TEXT NOT NULL,
+      media_type      TEXT NOT NULL CHECK(media_type IN ('photo', 'video')),
+      width           INTEGER,
+      height          INTEGER,
+      duration        INTEGER,
+      original_format TEXT,
+      compressed_format TEXT DEFAULT 'webp',
+      thumbnail_path  TEXT,
+      album_id        INTEGER REFERENCES albums(id) ON DELETE SET NULL,
+      is_favorite     INTEGER NOT NULL DEFAULT 0,
+      view_count      INTEGER NOT NULL DEFAULT 0,
+      tags            TEXT DEFAULT '[]',
+      metadata        TEXT DEFAULT '{}',
+      created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at      DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
-    CREATE TABLE IF NOT EXISTS download_queue (
-      id           INTEGER PRIMARY KEY AUTOINCREMENT,
-      youtube_url  TEXT    NOT NULL,
-      youtube_id   TEXT,
-      title        TEXT    NOT NULL DEFAULT 'Unknown',
-      thumbnail    TEXT,
-      format       TEXT    NOT NULL DEFAULT 'audio',
-      quality      TEXT    NOT NULL DEFAULT 'best',
-      batch_id     TEXT,
-      status       TEXT    NOT NULL DEFAULT 'pending',
-      progress     INTEGER NOT NULL DEFAULT 0,
-      error_msg    TEXT,
-      song_id      INTEGER REFERENCES songs(id) ON DELETE SET NULL,
-      created_at   DATETIME DEFAULT CURRENT_TIMESTAMP,
-      finished_at  DATETIME
+    CREATE TABLE IF NOT EXISTS media_edits (
+      id              INTEGER PRIMARY KEY AUTOINCREMENT,
+      media_id        INTEGER NOT NULL REFERENCES media(id) ON DELETE CASCADE,
+      edit_type       TEXT NOT NULL CHECK(edit_type IN ('rotate', 'resize', 'crop', 'compress')),
+      original_path   TEXT,
+      edited_path     TEXT,
+      parameters      TEXT,
+      created_at      DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
-    CREATE TABLE IF NOT EXISTS history (
+    CREATE TABLE IF NOT EXISTS media_favorites (
       id        INTEGER PRIMARY KEY AUTOINCREMENT,
-      song_id   INTEGER NOT NULL REFERENCES songs(id) ON DELETE CASCADE,
-      played_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      media_id  INTEGER NOT NULL REFERENCES media(id) ON DELETE CASCADE,
+      favorited_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE (media_id)
     );
-    CREATE INDEX IF NOT EXISTS idx_history_played_at ON history(played_at DESC);
+
+    CREATE INDEX IF NOT EXISTS idx_media_album ON media(album_id);
+    CREATE INDEX IF NOT EXISTS idx_media_type ON media(media_type);
+    CREATE INDEX IF NOT EXISTS idx_media_created ON media(created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_media_edits_media ON media_edits(media_id);
   `);
 
   // Idempotent column additions for upgrades
   const safe = (sql) => { try { db.exec(sql); } catch (_) {} };
-  safe("ALTER TABLE songs ADD COLUMN type  TEXT NOT NULL DEFAULT 'audio'");
-  safe("ALTER TABLE songs ADD COLUMN notes TEXT DEFAULT ''");
-  safe("ALTER TABLE download_queue ADD COLUMN format   TEXT NOT NULL DEFAULT 'audio'");
-  safe("ALTER TABLE download_queue ADD COLUMN quality  TEXT NOT NULL DEFAULT 'best'");
-  safe("ALTER TABLE download_queue ADD COLUMN batch_id TEXT");
+  safe("ALTER TABLE media ADD COLUMN compressed_format TEXT DEFAULT 'webp'");
+  safe("ALTER TABLE media ADD COLUMN thumbnail_path TEXT");
 
-  // Seed default categories
-  const cats = [
-    ['Pop',       '#FF3366', '🎤'],
-    ['Rock',      '#FF6B35', '🎸'],
-    ['Hip-Hop',   '#8B5CF6', '🎤'],
-    ['Electronic','#06D6A0', '🎛'],
-    ['Jazz',      '#FFD166', '🎷'],
-    ['Classical', '#4CC9F0', '🎻'],
-    ['Reggaeton', '#F72585', '💃'],
-    ['Lo-Fi',     '#7B8CDE', '🌙'],
-  ];
-  const ins = db.prepare('INSERT OR IGNORE INTO categories (name, color, icon) VALUES (?, ?, ?)');
-  cats.forEach(([n, c, i]) => ins.run(n, c, i));
-
-  db.prepare(`INSERT OR IGNORE INTO playlists (id, name, description) VALUES (1, 'Favorites', 'Your liked songs')`).run();
+  // Seed default album
+  db.prepare(`INSERT OR IGNORE INTO albums (id, name, description) VALUES (1, 'Uncategorized', 'Media without album')`).run();
 }
 
 module.exports = { migrate };

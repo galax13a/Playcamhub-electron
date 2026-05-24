@@ -47,6 +47,24 @@ function ensureDefaultUser(db) {
   }
 }
 
+function parseBearerToken(req) {
+  const authHeader = req.headers.authorization || '';
+  if (typeof authHeader === 'string' && authHeader.startsWith('Bearer ')) {
+    return authHeader.slice(7).trim();
+  }
+  return req.query.token || req.body.token || null;
+}
+
+function requireAuth(req, res, next) {
+  const token = parseBearerToken(req);
+  const username = validateAppSession(token);
+  if (!username) {
+    return res.status(401).json({ error: 'Sesión inválida o expirada' });
+  }
+  req.user = { username };
+  next();
+}
+
 // ── Auth ─────────────────────────────────────────────────────────────────────
 
 router.post('/auth/login', validate(LoginSchema), (req, res) => {
@@ -86,6 +104,23 @@ router.post('/auth/register', validate(RegisterSchema), (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
+// ── Public endpoints (no auth required) ──────────────────────────────────────
+
+router.get('/config', (_req, res) => {
+  res.json({
+    appName:    process.env.APP_NAME    || 'Starcho Electron',
+    appVersion: process.env.APP_VERSION || '1.0.0',
+    appSlogan:  process.env.APP_SLOGAN  || 'Desarrollo ágil y rápido con Electron',
+    logoText:   process.env.LOGO_TEXT   || 'Starcho',
+    appTitle:   process.env.APP_TITLE   || 'Starcho Electron — Dev Platform',
+  });
+});
+
+// GET settings is public (login screen needs the theme); writes remain protected below.
+router.get('/settings', require('../controllers/settingsController').getAll);
+
+router.use(requireAuth);
+
 router.get('/auth/profile', validate(ProfileQuerySchema, 'query'), (req, res) => {
   const { username } = req.query;
   try {
@@ -106,19 +141,7 @@ router.put('/auth/profile', validate(ProfileUpdateSchema), (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-// ── App config ────────────────────────────────────────────────────────────────
-
-router.get('/config', (_req, res) => {
-  res.json({
-    appName:    process.env.APP_NAME    || 'Starcho Electron',
-    appVersion: process.env.APP_VERSION || '1.0.0',
-    appSlogan:  process.env.APP_SLOGAN  || 'Desarrollo ágil y rápido con Electron',
-    logoText:   process.env.LOGO_TEXT   || 'Starcho',
-    appTitle:   process.env.APP_TITLE   || 'Starcho Electron — Dev Platform',
-  });
-});
-
-// ── Settings (global key-value store) ────────────────────────────────────────
+// ── Settings writes (protected — GET is public above) ────────────────────────
 
 router.use('/settings', require('./settingsRoutes'));
 

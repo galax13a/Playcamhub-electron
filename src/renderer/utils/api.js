@@ -1,12 +1,35 @@
 let BASE = 'http://127.0.0.1:3847';
+let AUTH_TOKEN = null;
 
 function setBase(url) { BASE = url; }
+function getBase()    { return BASE; }
+
+function getStoredSession() {
+  try {
+    const raw = sessionStorage.getItem('auth_session') || localStorage.getItem('auth_session');
+    return JSON.parse(raw || 'null');
+  } catch (_) {
+    return null;
+  }
+}
+
+function getAuthToken() {
+  if (AUTH_TOKEN) return AUTH_TOKEN;
+  if (typeof window === 'undefined') return null;
+  if (window.playcamAuthToken) return window.playcamAuthToken;
+  const session = getStoredSession();
+  return session?.token || null;
+}
+
+function setAuthToken(token) {
+  AUTH_TOKEN = token || null;
+}
 
 async function request(method, path, body) {
-  const opts = {
-    method,
-    headers: { 'Content-Type': 'application/json' },
-  };
+  const token = getAuthToken();
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers.Authorization = 'Bearer ' + token;
+  const opts = { method, headers };
   if (body !== undefined) opts.body = JSON.stringify(body);
   const res = await fetch(`${BASE}/api${path}`, opts);
   const data = await res.json().catch(() => ({}));
@@ -76,6 +99,7 @@ const API = {
     getProfile:    (username) => request('GET', `/auth/profile?username=${encodeURIComponent(username)}`),
     updateProfile: (d)        => request('PUT', '/auth/profile', d),
   },
+  setAuthToken,
 
   // Plugin management + per-plugin DB settings (prefix plugin_{id}_ in settings table)
   plugins: {
@@ -139,9 +163,32 @@ const API = {
     reset:           ()             => request('POST', '/library/reset'),
   },
 
-  // Media URLs
-  musicUrl:     (filePath)  => `${BASE}/music/${filePath}`,
-  thumbnailUrl: (filePath)  => `${BASE}/thumbnails/${filePath}`,
+  // Media (photos / videos — starcho MediaHub plugin)
+  media: {
+    list:     (q = {}) => request('GET',    `/media?${qs(q)}`),
+    get:      (id)     => request('GET',    `/media/${id}`),
+    stats:    ()       => request('GET',    '/media/stats'),
+    favorite: (id)     => request('POST',   `/media/${id}/favorite`),
+    delete:   (id)     => request('DELETE', `/media/${id}`),
+    edit:     (id, d)  => request('POST',   `/media/${id}/edit`, d),
+  },
+
+  // Albums (starcho MediaHub plugin)
+  albums: {
+    list:     ()              => request('GET',    '/albums'),
+    get:      (id)            => request('GET',    `/albums/${id}`),
+    create:   (d)             => request('POST',   '/albums', d),
+    update:   (id, d)         => request('PUT',    `/albums/${id}`, d),
+    delete:   (id)            => request('DELETE', `/albums/${id}`),
+    addMedia: (id, mediaIds)  => request('POST',   `/albums/${id}/add-media`, { mediaIds }),
+  },
+
+  // Media URLs — token appended so <img src> / <video src> work (no Authorization header on static loads)
+  musicUrl:      (filePath) => `${BASE}/music/${filePath}`,
+  thumbnailUrl:  (filePath) => `${BASE}/thumbnails/${filePath}`,
+  mediaThumbUrl: (id) => { const t = getAuthToken(); return `${BASE}/api/media/${id}/thumb${t ? '?token=' + encodeURIComponent(t) : ''}`; },
+  mediaViewUrl:  (id) => { const t = getAuthToken(); return `${BASE}/api/media/${id}/view${t ? '?token=' + encodeURIComponent(t) : ''}`; },
+  albumCoverUrl: (id) => { const t = getAuthToken(); return `${BASE}/api/albums/${id}/cover${t ? '?token=' + encodeURIComponent(t) : ''}`; },
 };
 
 function qs(obj) {
@@ -152,4 +199,4 @@ function qs(obj) {
 }
 
 export default API;
-export { setBase };
+export { setBase, getBase };

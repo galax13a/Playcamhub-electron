@@ -28,7 +28,7 @@ const { startServer } = require('./src/backend/server');
 const { IS_PROD, IS_DEV } = require('./src/main/env');
 
 log.transports.file.level = IS_PROD ? 'warn' : 'info';
-log.info(`StarchoElectron starting… v${app.getVersion()} [${IS_PROD ? 'PRODUCTION' : 'DEVELOPMENT'}]`);
+log.info(`PlaycamHub Studio starting… v${app.getVersion()} [${IS_PROD ? 'PRODUCTION' : 'DEVELOPMENT'}]`);
 
 // ── Chromium security flags (producción) ─────────────────────────────────────
 if (IS_PROD) {
@@ -41,7 +41,7 @@ if (IS_PROD) {
 }
 
 // Set App User Model ID so Windows taskbar shows the custom icon
-app.setAppUserModelId(process.env.APP_ID || 'com.starcho.electron');
+app.setAppUserModelId(process.env.APP_ID || 'com.playcamhub.studio');
 
 // Single instance lock
 const gotLock = app.requestSingleInstanceLock();
@@ -51,11 +51,11 @@ if (!gotLock) {
 }
 
 const APP_PATHS = {
-  userData:    path.join(app.getPath('userData'), 'StarchoElectron'),
-  music:       path.join(app.getPath('userData'), 'StarchoElectron', 'music'),
-  thumbnails:  path.join(app.getPath('userData'), 'StarchoElectron', 'thumbnails'),
-  bin:         path.join(app.getPath('userData'), 'StarchoElectron', 'bin'),
-  db:          path.join(app.getPath('userData'), 'StarchoElectron', 'starcho.db'),
+  userData:    path.join(app.getPath('userData'), 'PlaycamHub Studio'),
+  music:       path.join(app.getPath('userData'), 'PlaycamHub Studio', 'music'),
+  thumbnails:  path.join(app.getPath('userData'), 'PlaycamHub Studio', 'thumbnails'),
+  bin:         path.join(app.getPath('userData'), 'PlaycamHub Studio', 'bin'),
+  db:          path.join(app.getPath('userData'), 'PlaycamHub Studio', 'playcamhub.db'),
 };
 
 global.APP_PATHS = APP_PATHS;
@@ -105,4 +105,4 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 
-app.on('will-quit', () => log.info('StarchoElectron shutting down'));
+app.on('will-quit', () => log.info('PlaycamHub Studio shutting down'));

@@ -53,19 +53,11 @@ async function boot() {
   // 3. Show "AppName vX.Y.Z" in the custom title bar — reads from .env via backend config
   const _tb  = document.getElementById('tb-title');
   const _cfg = store.state.appConfig;
-  if (_tb) _tb.textContent = `${_cfg.appName || 'StarchoElectron'} v${_cfg.appVersion || '1.0.0'}`;
+  if (_tb) _tb.textContent = `${_cfg.appName || 'PlaycamHub Studio'} v${_cfg.appVersion || '1.0.1'}`;
 
-  // 4. Load plugin front-ends — must happen before Sidebar so nav items are available
-  await PluginRegistry.init();
+  // 4. Plugins require auth — loaded in the user:login handler after session is confirmed.
 
-  // 5. Load Starcho-specific store data only when the plugin is active
-  if (PluginRegistry.getPlugins().some(p => p.id === 'starcho')) {
-    await Promise.all([
-      store.loadSongs(),
-      store.loadPlaylists(),
-      store.loadCategories(),
-    ]);
-  }
+  // 5. (MediaHub plugin loads its own data on-demand per view — no global preload needed)
 
   // 6. Wire window controls (includes mobile hamburger sidebar toggle)
   wireWindowControls();
@@ -75,7 +67,7 @@ async function boot() {
   initSidebar(document.getElementById('sidebar'));
   initPlayer(document.getElementById('player-bar'));
 
-  // 8. Init router — renders initial view after sidebar is ready
+  // 8. Init router — wires navigate event listener (actual view rendered after user:login)
   initRouter();
 
   // 9. Apply titlebar theme from DB settings (must run before first paint)
@@ -90,7 +82,7 @@ async function boot() {
   // 11. Global keyboard shortcuts
   wireKeyboard();
 
-  console.log('StarchoElectron v1.0.2-beta.1 ready 🚀');
+  console.log('PlaycamHub Studio v1.0.1 ready 🚀');
 }
 
 function wireWindowControls() {
@@ -247,7 +239,7 @@ function wireUpdaterEvents() {
 
     // Also fire an OS-level notification so the user notices even if the window is minimized
     api.showNotification?.(
-      'StarchoElectron',
+      'PlaycamHub Studio',
       `Actualización v${info.version} lista — abre la app para instalar`,
     );
   });
@@ -282,21 +274,44 @@ function wireKeyboard() {
 }
 
 // After successful login, login.js dispatches 'user:login' with the user payload.
-// We load the full profile then navigate to the last route the user was on.
+// Plugins, settings and config are loaded here (they require auth — boot() calls fail with 401).
 window.addEventListener('user:login', async (e) => {
   store.setState({ loggedUser: e.detail });
-  await store.loadUserProfile();
+
+  // Ensure the API module has the token — login.js sets window.playcamAuthToken before firing
+  // this event; setAuthToken copies it into the module-level cache so request() always finds it.
+  const _tok = window.playcamAuthToken
+    || (() => { try { return JSON.parse(sessionStorage.getItem('auth_session') || localStorage.getItem('auth_session') || 'null')?.token; } catch (_) {} })();
+  if (_tok) API.setAuthToken(_tok);
+
+  // Load plugins now that we have an authenticated session
+  PluginRegistry.reset();
+  await PluginRegistry.init();
+
+  // Load settings and config now that we have auth
+  await Promise.all([
+    store.loadSettings(),
+    store.loadConfig(),
+    store.loadUserProfile(),
+  ]);
+
+  // Re-apply title bar and titlebar theme with real authed config/settings
+  const _tb  = document.getElementById('tb-title');
+  const _cfg = store.state.appConfig;
+  if (_tb) _tb.textContent = `${_cfg.appName || 'PlaycamHub Studio'} v${_cfg.appVersion || '1.0.1'}`;
+  applyTitlebarTheme(store.state.settings?.titlebar_theme);
+
   const lastView = (() => { try { return localStorage.getItem('last_view'); } catch (_) { return null; } })();
   store.navigate(lastView || 'home');
 });
 
 boot().catch(err => {
   logError(err);
-  console.error('StarchoElectron boot failed:', err);
+  console.error('PlaycamHub Studio boot failed:', err);
   document.getElementById('app').innerHTML = `
     <div style="color:#fff;background:#0a0a0a;height:100vh;display:flex;align-items:center;
                 justify-content:center;font-family:sans-serif;flex-direction:column;gap:16px">
-      <h2 style="color:#FF3366">StarchoElectron failed to start</h2>
+      <h2 style="color:#FF3366">PlaycamHub Studio failed to start</h2>
       <pre style="color:#888;font-size:12px">${err.message}</pre>
     </div>`;
 });

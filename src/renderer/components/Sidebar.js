@@ -16,20 +16,23 @@
 import store           from '../store.js';
 import EventBus        from '../utils/eventBus.js';
 import PluginRegistry  from '../core/PluginRegistry.js';
+import API             from '../utils/api.js';
 import { openProfileModal } from './Modal.js';
 import { t } from '../utils/i18n.js';
 
 const DEFAULT_AVATAR = `data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><circle cx='32' cy='32' r='32' fill='%23333'/><circle cx='32' cy='24' r='12' fill='%23666'/><ellipse cx='32' cy='56' rx='20' ry='14' fill='%23666'/></svg>`;
 
-// Module-level so _collapsed survives _rebuild() which wipes innerHTML
-let _el        = null;
-let _collapsed = false;
+// Module-level so these survive _rebuild() which wipes innerHTML
+let _el              = null;
+let _collapsed       = false;
+let _multimediaOpen  = true;
 
 export function initSidebar(el) {
   _el = el;
 
-  // Restore collapse preference from previous session
-  _collapsed = localStorage.getItem('sb_collapsed') === '1';
+  // Restore collapse preferences from previous session
+  _collapsed      = localStorage.getItem('sb_collapsed') === '1';
+  _multimediaOpen = localStorage.getItem('ng_multimedia') !== '0';
 
   _rebuild(el);
 
@@ -93,6 +96,22 @@ function _navItem(n, cur) {
   </a>`;
 }
 
+/** Build a sub-item anchor (indented, used inside a nav-group). */
+function _navSubItem(n, cur) {
+  const label = n.labelKey ? t(n.labelKey) : (n.label || '');
+  return `<a class="nav-item nav-sub-item${cur === n.view ? ' active' : ''}" data-view="${n.view}" role="button" tabindex="0">
+    <span class="nav-icon">${n.icon}</span><span class="nav-label">${label}</span>
+  </a>`;
+}
+
+/** Toggle the multimedia group open/closed and persist to localStorage. */
+function _toggleGroup(el) {
+  _multimediaOpen = !_multimediaOpen;
+  localStorage.setItem('ng_multimedia', _multimediaOpen ? '1' : '0');
+  const group = el.querySelector('#ng-multimedia');
+  if (group) group.classList.toggle('open', _multimediaOpen);
+}
+
 // Build full sidebar HTML from current store + plugin state
 function _html(s = {}) {
   const cfg         = store.state.appConfig;
@@ -101,11 +120,22 @@ function _html(s = {}) {
   const pluginNav   = PluginRegistry.getNavItems();
   const cur         = store.state.currentView;
 
-  // Starcho (music) items appear above the separator; all others below as "Modules"
+  // Starcho (multimedia) items shown as a collapsible group; all others below as "Modules"
   const musicItems  = pluginNav.filter(n => n.view.startsWith('starcho:'));
   const moduleItems = pluginNav.filter(n => !n.view.startsWith('starcho:'));
 
-  const musicHtml   = musicItems.map(n => _navItem(n, cur)).join('');
+  const multimediaGroupHtml = musicItems.length ? `
+    <div class="nav-group${_multimediaOpen ? ' open' : ''}" id="ng-multimedia">
+      <div class="nav-group-header" id="ng-multimedia-hdr" role="button" tabindex="0">
+        <span class="nav-icon">🎬</span>
+        <span class="nav-label">${t('nav_multimedia')}</span>
+        <span class="nav-group-arrow">▾</span>
+      </div>
+      <div class="nav-group-items">
+        ${musicItems.map(n => _navSubItem(n, cur)).join('')}
+      </div>
+    </div>` : '';
+
   const modulesHtml = moduleItems.length
     ? `<div class="nav-section-label">${t('nav_modules')}</div>
        ${moduleItems.map(n => _navItem(n, cur)).join('')}`
@@ -140,7 +170,7 @@ function _html(s = {}) {
 
     <nav class="sidebar-nav" id="sidebar-nav">
       ${_navItem({ view: 'home', icon: '🏠', labelKey: 'nav_home' }, cur)}
-      ${musicHtml ? `<div class="nav-separator"></div>${musicHtml}` : ''}
+      ${multimediaGroupHtml ? `<div class="nav-separator"></div>${multimediaGroupHtml}` : ''}
       ${modulesHtml ? `<div class="nav-separator"></div>${modulesHtml}` : ''}
       <div class="nav-separator"></div>
       ${_navItem({ view: 'settings', icon: '⚙️', labelKey: 'nav_settings' }, cur)}
@@ -170,6 +200,7 @@ function _bind(el) {
   });
 
   el.querySelector('#sb-collapse-btn')?.addEventListener('click', () => _toggleCollapse(el));
+  el.querySelector('#ng-multimedia-hdr')?.addEventListener('click', () => _toggleGroup(el));
 
   // User row opens profile modal; stops before reaching the logout button
   el.querySelector('#sidebar-user')?.addEventListener('click', (e) => {
@@ -179,7 +210,12 @@ function _bind(el) {
 
   el.querySelector('#btn-logout')?.addEventListener('click', (e) => {
     e.stopPropagation();
-    localStorage.removeItem('auth_remember');
+    // Clear all stored session data so auto-login does not fire after reload
+    try { localStorage.removeItem('auth_session');   } catch (_) {}
+    try { sessionStorage.removeItem('auth_session'); } catch (_) {}
+    try { localStorage.removeItem('auth_remember');  } catch (_) {}
+    window.playcamAuthToken = null;
+    API.setAuthToken(null);
     location.reload();
   });
 }

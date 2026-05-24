@@ -725,7 +725,7 @@ function _bindLibrary(el) {
       try { data = JSON.parse(ev.target.result); }
       catch (_) { showToast('Invalid JSON file', 'error'); return; }
 
-      if (!data?.songs) { showToast('Not a valid StarchoElectron library file', 'error'); return; }
+      if (!data?.songs) { showToast('Not a valid PlaycamHub Studio library file', 'error'); return; }
 
       openImportLibraryModal(data, async (redownload) => {
         try {
@@ -904,13 +904,12 @@ async function _executeReset() {
 
 async function _loadLibraryStats(el) {
   try {
-    const stats   = await API.songs.stats();
+    const stats   = await API.media.stats();
     const statEl  = el.querySelector('#lib-stat');
     const diskEl  = el.querySelector('#lib-disk-badge');
     if (statEl) {
       statEl.innerHTML =
-        `🎵 ${stats.audioCount} audio &nbsp;·&nbsp; 🎬 ${stats.videoCount} video` +
-        `&nbsp;·&nbsp; ${store.state.playlists.length} playlists`;
+        `🖼️ ${stats.photoCount ?? 0} photos &nbsp;·&nbsp; 🎬 ${stats.videoCount ?? 0} videos`;
     }
     if (diskEl && stats.diskBytes != null) {
       diskEl.textContent = _fmtBytes(stats.diskBytes);

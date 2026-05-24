@@ -73,16 +73,31 @@
   // Migrate old auth_remember (stored plaintext password) → remove it on first run
   localStorage.removeItem('auth_remember');
 
-  var storedSession = null;
-  try { storedSession = JSON.parse(localStorage.getItem('auth_session') || 'null'); } catch (_) {}
+  function getStoredSession() {
+    try {
+      var raw = sessionStorage.getItem('auth_session') || localStorage.getItem('auth_session');
+      return JSON.parse(raw || 'null');
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function clearStoredSession() {
+    try { localStorage.removeItem('auth_session'); } catch (_) {}
+    try { sessionStorage.removeItem('auth_session'); } catch (_) {}
+    window.playcamAuthToken = null;
+  }
+
+  var storedSession = getStoredSession();
 
   // Discard client-side if expiry already passed (server is authoritative, but avoids a round-trip)
   if (storedSession && storedSession.expiresAt && Date.now() > storedSession.expiresAt) {
-    localStorage.removeItem('auth_session');
+    clearStoredSession();
     storedSession = null;
   }
 
   if (storedSession && storedSession.token) {
+    window.playcamAuthToken = storedSession.token;
     loginPg.style.opacity = '0';
 
     getPort().then(function (port) {
@@ -95,7 +110,7 @@
         enter();
       } else {
         // Token expired or invalid — force re-login
-        localStorage.removeItem('auth_session');
+        clearStoredSession();
         loginPg.style.opacity = '';
         document.getElementById('lp-username').focus();
       }
@@ -170,15 +185,20 @@
           // Store session token (never the password) — always saved so the
           // app can validate on next restart without re-entering credentials.
           // "Remember me" controls whether to keep it for 7 days or just this session.
+          window.playcamAuthToken = r.data.token || null;
+          var sessionData = {
+            token:      r.data.token,
+            username:   r.data.username || user,
+            expiresAt:  r.data.expiresAt,
+          };
           if (rememberCk.checked && r.data.token) {
-            localStorage.setItem('auth_session', JSON.stringify({
-              token:      r.data.token,
-              username:   r.data.username || user,
-              expiresAt:  r.data.expiresAt,
-            }));
-          } else {
-            // Not remembered — clear any previous session so next launch shows login
+            localStorage.setItem('auth_session', JSON.stringify(sessionData));
+            sessionStorage.removeItem('auth_session');
+          } else if (r.data.token) {
+            sessionStorage.setItem('auth_session', JSON.stringify(sessionData));
             localStorage.removeItem('auth_session');
+          } else {
+            clearStoredSession();
           }
           loginBtn.innerHTML = makeSvg('<polyline points="20 6 9 17 4 12"/>') + ' Bienvenido';
           loginBtn.style.background = 'linear-gradient(135deg,#10b981,#059669)';

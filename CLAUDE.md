@@ -1,8 +1,8 @@
-# StarchoElectron — Contexto permanente para Claude Code
+# PlaycamHub Studio — Contexto permanente para Claude Code
 
-Proyecto: **StarchoElectron** — starkit Electron de escritorio.
+Proyecto: **PlaycamHub Studio** — starkit Electron de escritorio.
 Owner: galax13a · botcamdev@gmail.com
-Repo: https://github.com/galax13a/StarchoElectron.git (rama `master`)
+Repo: https://github.com/galax13a/StarchoElectron.git (rama `master`) — NOTA: Originalmente basado en StarchoElectron
 Stack: Electron 28 · Express 4 · better-sqlite3 · vanilla JS ES Modules. Sin bundler, sin React.
 
 ---
