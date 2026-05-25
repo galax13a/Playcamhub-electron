@@ -8,6 +8,16 @@ const sharp  = require('sharp');
 const { v4: uuidv4 } = require('uuid');
 const { getDb } = require('../database/connection');
 
+// Point fluent-ffmpeg at the bundled ffmpeg binary (ffmpeg-static)
+let _ffmpeg = null;
+try {
+  _ffmpeg = require('fluent-ffmpeg');
+  try {
+    const ffmpegBin = require('ffmpeg-static');
+    if (ffmpegBin) _ffmpeg.setFfmpegPath(ffmpegBin);
+  } catch (_) { /* rely on system PATH */ }
+} catch (_) { /* fluent-ffmpeg not installed */ }
+
 // ── Ensure download_count column exists (idempotent) ─────────────────────────
 function _ensureDownloadCount() {
   try {
@@ -565,15 +575,17 @@ router.post('/:id/trim', (req, res) => {
     if (!m) return res.status(404).json({ error: 'Not found' });
     if (m.media_type !== 'video') return res.status(400).json({ error: 'Solo se pueden cortar videos' });
 
-    const ffmpeg     = require('fluent-ffmpeg');
+    if (!_ffmpeg) return res.status(500).json({ error: 'FFmpeg no disponible en este servidor' });
     const inputPath  = m.file_path;
     const ext        = path.extname(inputPath);
     const outputPath = path.join(path.dirname(inputPath), uuidv4() + ext);
 
-    ffmpeg(inputPath)
+    _ffmpeg(inputPath)
       .setStartTime(startSec)
       .setDuration(endSec - startSec)
       .output(outputPath)
+      .videoCodec('copy')
+      .audioCodec('copy')
       .on('end', () => {
         try {
           const stat = fs.statSync(outputPath);
@@ -604,9 +616,8 @@ router.post('/:id/gif', (req, res) => {
     if (!m) return res.status(404).json({ error: 'Not found' });
     if (m.media_type !== 'video') return res.status(400).json({ error: 'Solo se pueden convertir videos' });
 
-    let ffmpeg;
-    try { ffmpeg = require('fluent-ffmpeg'); }
-    catch (_) { return res.status(500).json({ error: 'FFmpeg no disponible' }); }
+    if (!_ffmpeg) return res.status(500).json({ error: 'FFmpeg no disponible' });
+    const ffmpeg = _ffmpeg;
 
     const startSec    = Math.max(0, parseFloat(req.body.start)    || 0);
     const durationSec = Math.min(10, Math.max(0.5, parseFloat(req.body.duration) || 10));

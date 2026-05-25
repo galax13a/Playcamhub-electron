@@ -379,7 +379,7 @@ export async function renderVideoEditor(el, extra = {}) {
       const token = window.playcamAuthToken || (() => {
         try { return JSON.parse(sessionStorage.getItem('auth_session') || localStorage.getItem('auth_session') || 'null')?.token; } catch (_) { return null; }
       })();
-      const base = API.mediaViewUrl(mediaId).replace(`/api/media/${mediaId}/view`, '');
+      const base = API.getBase();
       const r = await fetch(`${base}/api/media/${mediaId}/video-thumb`, {
         method: 'POST',
         headers: token ? { Authorization: 'Bearer ' + token } : {},
@@ -793,7 +793,7 @@ export async function renderVideoEditor(el, extra = {}) {
       const token = window.playcamAuthToken || (() => {
         try { return JSON.parse(sessionStorage.getItem('auth_session') || localStorage.getItem('auth_session') || 'null')?.token; } catch (_) { return null; }
       })();
-      const base = API.mediaViewUrl(mediaId).replace(`/api/media/${mediaId}/view`, '');
+      const base = API.getBase();
       const resp = await fetch(`${base}/api/media/${mediaId}/gif`, {
         method:  'POST',
         headers: {

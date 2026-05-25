@@ -351,9 +351,12 @@ export async function renderSettings(el) {
 
         <!-- OpenAI -->
         <div style="background:var(--bg-3);border-radius:10px;padding:14px 16px;margin-bottom:12px;border:1px solid rgba(255,255,255,.07)">
-          <div style="font-weight:700;font-size:13px;margin-bottom:12px;display:flex;align-items:center;gap:8px">
+          <div style="font-weight:700;font-size:13px;margin-bottom:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
             🤖 OpenAI (DALL-E)
             <span style="font-size:10px;padding:2px 7px;background:rgba(16,185,129,.15);color:#10b981;border-radius:4px">img2img</span>
+            <a href="https://platform.openai.com/api-keys" target="_blank"
+               style="margin-left:auto;font-size:11px;color:var(--accent);text-decoration:none;font-weight:600"
+               title="Obtener API Key de OpenAI">🔑 Obtener API Key →</a>
           </div>
           <div class="form-group" style="margin-bottom:10px">
             <label style="font-size:11px;font-weight:700;color:var(--text-muted)">API KEY</label>
@@ -372,9 +375,12 @@ export async function renderSettings(el) {
 
         <!-- Stability AI -->
         <div style="background:var(--bg-3);border-radius:10px;padding:14px 16px;margin-bottom:12px;border:1px solid rgba(255,255,255,.07)">
-          <div style="font-weight:700;font-size:13px;margin-bottom:12px;display:flex;align-items:center;gap:8px">
+          <div style="font-weight:700;font-size:13px;margin-bottom:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
             🎨 Stability AI
             <span style="font-size:10px;padding:2px 7px;background:rgba(99,102,241,.18);color:#818cf8;border-radius:4px">img2img</span>
+            <a href="https://platform.stability.ai/account/keys" target="_blank"
+               style="margin-left:auto;font-size:11px;color:var(--accent);text-decoration:none;font-weight:600"
+               title="Obtener API Key de Stability AI">🔑 Obtener API Key →</a>
           </div>
           <div class="form-group" style="margin-bottom:10px">
             <label style="font-size:11px;font-weight:700;color:var(--text-muted)">API KEY</label>
@@ -393,9 +399,12 @@ export async function renderSettings(el) {
 
         <!-- Replicate -->
         <div style="background:var(--bg-3);border-radius:10px;padding:14px 16px;margin-bottom:16px;border:1px solid rgba(255,255,255,.07)">
-          <div style="font-weight:700;font-size:13px;margin-bottom:12px;display:flex;align-items:center;gap:8px">
+          <div style="font-weight:700;font-size:13px;margin-bottom:6px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
             ⚡ Replicate (Flux)
             <span style="font-size:10px;padding:2px 7px;background:rgba(245,158,11,.15);color:#fbbf24;border-radius:4px">img2img</span>
+            <a href="https://replicate.com/account/api-tokens" target="_blank"
+               style="margin-left:auto;font-size:11px;color:var(--accent);text-decoration:none;font-weight:600"
+               title="Obtener API Token de Replicate">🔑 Obtener API Key →</a>
           </div>
           <div class="form-group" style="margin-bottom:10px">
             <label style="font-size:11px;font-weight:700;color:var(--text-muted)">API KEY</label>
@@ -485,6 +494,15 @@ export async function renderSettings(el) {
 // ── AI providers ─────────────────────────────────────────────────────────────
 
 function _bindAI(el) {
+  // API key links — open in system browser via Electron shell
+  el.querySelectorAll('#sec-ai a[href]').forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      const url = a.getAttribute('href');
+      if (url && window.electronAPI?.openExternal) window.electronAPI.openExternal(url);
+    });
+  });
+
   el.querySelector('#btn-save-ai')?.addEventListener('click', async () => {
     const btn = el.querySelector('#btn-save-ai');
     btn.disabled = true;
