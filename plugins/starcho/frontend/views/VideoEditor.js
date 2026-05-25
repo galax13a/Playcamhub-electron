@@ -642,13 +642,19 @@ export async function renderVideoEditor(el, extra = {}) {
     <!-- TAB: GIF -->
     <div class="ve-tab-pane" id="ve-pane-gif">
       <p style="font-size:13px;color:var(--text-secondary);margin-bottom:14px;line-height:1.5">
-        Convierte los primeros <strong>10 segundos</strong> del video a GIF animado
-        (480px ancho, 12 fps, paleta optimizada).
+        Exporta un segmento como GIF animado (480px, 12 fps, paleta optimizada). Máx <strong>30 s</strong>.
       </p>
-      <label style="display:flex;align-items:center;gap:8px;font-size:13px;margin-bottom:14px;cursor:pointer">
-        <input type="checkbox" id="ve-gif-use-trim">
-        Usar segmento del corte (máx 10s)
-      </label>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <label style="font-size:12px;color:var(--text-muted)">Desde (s)
+          <input type="number" id="ve-gif-start" min="0" step="0.1" value="0"
+            style="width:100%;margin-top:4px;padding:6px 8px;background:var(--input-bg,#2a2a2a);color:var(--text);border:1px solid var(--border);border-radius:6px;font-size:13px">
+        </label>
+        <label style="font-size:12px;color:var(--text-muted)">Hasta (s)
+          <input type="number" id="ve-gif-end" min="0" step="0.1" value="10"
+            style="width:100%;margin-top:4px;padding:6px 8px;background:var(--input-bg,#2a2a2a);color:var(--text);border:1px solid var(--border);border-radius:6px;font-size:13px">
+        </label>
+      </div>
+      <div id="ve-gif-info" style="font-size:12px;color:var(--text-muted);min-height:18px;margin-bottom:12px"></div>
       <button class="btn btn-primary" id="ve-gif-btn" style="width:100%;padding:10px">🎬 Exportar como GIF</button>
       <div id="ve-gif-spinner" style="display:none;text-align:center;padding:12px;color:var(--text-muted);font-size:13px">
         ⏳ Generando GIF…
@@ -765,23 +771,43 @@ export async function renderVideoEditor(el, extra = {}) {
 
   // ── GIF export ────────────────────────────────────────────────────────────
 
-  rightPanel.querySelector('#ve-gif-btn').addEventListener('click', async () => {
-    const useTrim  = rightPanel.querySelector('#ve-gif-use-trim').checked;
-    const btn      = rightPanel.querySelector('#ve-gif-btn');
-    const spinner  = rightPanel.querySelector('#ve-gif-spinner');
-    const result   = rightPanel.querySelector('#ve-gif-result');
+  const gifStartInp = rightPanel.querySelector('#ve-gif-start');
+  const gifEndInp   = rightPanel.querySelector('#ve-gif-end');
+  const gifInfo     = rightPanel.querySelector('#ve-gif-info');
 
-    let gifStart    = 0;
-    let gifDuration = 10;
-
-    if (useTrim) {
-      const s = parseFloat(startInp.value) || 0;
-      const e = parseFloat(endInp.value);
-      if (!isNaN(e) && e > s) {
-        gifStart    = s;
-        gifDuration = Math.min(10, e - s);
+  function _updateGifInfo() {
+    const s = parseFloat(gifStartInp.value) || 0;
+    const e = parseFloat(gifEndInp.value);
+    if (isNaN(e) || e <= s) {
+      gifInfo.textContent = '⚠ El fin debe ser mayor que el inicio';
+      gifInfo.style.color = 'var(--red)';
+    } else {
+      const dur = e - s;
+      if (dur > 30) {
+        gifInfo.textContent = `⚠ Máx 30 s — se usarán los primeros 30 s desde ${s.toFixed(1)}s`;
+        gifInfo.style.color = 'var(--yellow, orange)';
+      } else {
+        gifInfo.textContent = `Duración: ${dur.toFixed(1)} s`;
+        gifInfo.style.color = 'var(--text-muted)';
       }
     }
+  }
+  gifStartInp.addEventListener('input', _updateGifInfo);
+  gifEndInp.addEventListener('input',   _updateGifInfo);
+  _updateGifInfo();
+
+  rightPanel.querySelector('#ve-gif-btn').addEventListener('click', async () => {
+    const btn     = rightPanel.querySelector('#ve-gif-btn');
+    const spinner = rightPanel.querySelector('#ve-gif-spinner');
+    const result  = rightPanel.querySelector('#ve-gif-result');
+
+    const gifStart    = Math.max(0, parseFloat(gifStartInp.value) || 0);
+    const gifEnd      = parseFloat(gifEndInp.value);
+    if (isNaN(gifEnd) || gifEnd <= gifStart) {
+      showToast('El tiempo de fin debe ser mayor que el inicio', 'error');
+      return;
+    }
+    const gifDuration = Math.min(30, gifEnd - gifStart);
 
     btn.disabled    = true;
     btn.textContent = '⏳ Exportando…';

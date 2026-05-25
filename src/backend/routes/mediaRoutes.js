@@ -620,7 +620,7 @@ router.post('/:id/gif', (req, res) => {
     const ffmpeg = _ffmpeg;
 
     const startSec    = Math.max(0, parseFloat(req.body.start)    || 0);
-    const durationSec = Math.min(10, Math.max(0.5, parseFloat(req.body.duration) || 10));
+    const durationSec = Math.min(30, Math.max(0.5, parseFloat(req.body.duration) || 30));
 
     const inputPath = m.file_path;
     const gifName   = uuidv4() + '.gif';
