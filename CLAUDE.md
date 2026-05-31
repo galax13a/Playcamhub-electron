@@ -3,7 +3,7 @@
 Proyecto: **PlaycamHub Studio** — starkit Electron de escritorio.
 Owner: galax13a · botcamdev@gmail.com
 Repo: https://github.com/galax13a/StarchoElectron.git (rama `master`) — NOTA: Originalmente basado en StarchoElectron
-Stack: Electron 28 · Express 4 · better-sqlite3 · vanilla JS ES Modules. Sin bundler, sin React.
+Stack: Electron 42 · Express 4 · better-sqlite3 · vanilla JS ES Modules. Sin bundler, sin React.
 
 ---
 
@@ -64,13 +64,18 @@ Escribe `/starcho` para obtener el contexto completo del proyecto con plantillas
 
 ---
 
-## Estado actual (2026-05-23)
+## Estado actual (2026-05-28)
 
-- Electron 28.3.3 · versión app `1.0.2-beta.1`
-- 4 plugins activos: `starcho` (música), `contacts`, `notes`, `tasks`
+- Electron 42.3.0 · versión app `1.0.4`
+- 5 plugins activos: `starcho` (música/media), `contacts`, `notes`, `tasks`, `speedtest`
 - Auto-updater GitHub Releases activado
 - Panel admin en `/admin` (SSR, CSRF, rate limiting)
 - 3 temas de titlebar: `mac`, `linux`, `cartoon`
 - Paginación server-side en `tasks` y `contacts` con Paginator universal
 - Live clock + disco duro real en Dashboard
 - Sistema de temas: 12 temas UI + 8 temas de login
+- Build con `asar: true` + `asarUnpack` para módulos nativos
+- Migraciones versionadas vía tabla `schema_version`
+- Tests con Vitest (schemas Zod + migration runner) · ESLint + Prettier · CI en GitHub Actions
+
+> **Versión = única fuente de verdad:** el número de `package.json` es el oficial. README, CLAUDE.md y CHANGELOG deben coincidir con él en cada release.

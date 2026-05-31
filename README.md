@@ -5,7 +5,7 @@ Desktop app for content creators — music player, multimedia manager, and produ
 ![Electron](https://img.shields.io/badge/Electron-28-47848F?logo=electron&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-blue)
-![Version](https://img.shields.io/badge/version-1.0.3-orange)
+![Version](https://img.shields.io/badge/version-1.0.4-orange)
 
 ---
 
@@ -54,7 +54,7 @@ Desktop app for content creators — music player, multimedia manager, and produ
 
 | Layer | Tech |
 |-------|------|
-| Shell | Electron 28 |
+| Shell | Electron 42 |
 | Backend | Express 4 (embedded, auto-port) |
 | Database | better-sqlite3 (synchronous SQLite) |
 | Frontend | Vanilla JS ES Modules — no bundler, no React |
@@ -160,7 +160,7 @@ JWT_SECRET=changeme    # Token signing secret — change in production
 ADMIN_USER=admin       # Admin panel username
 ADMIN_PASS=changeme    # Admin panel password
 APP_NAME=PlaycamHub Studio
-APP_VERSION=1.0.3
+APP_VERSION=1.0.4
 ```
 
 ---
@@ -177,6 +177,12 @@ APP_VERSION=1.0.3
 ---
 
 ## Changelog
+
+### v1.0.4 — 2026-05-28
+- **Build**: `asar: true` enabled with `asarUnpack` for native modules (better-sqlite3, sharp, ffmpeg-static, yt-dlp) — source no longer ships unpacked on disk
+- **DB**: explicit, ordered schema migrations tracked via the `schema_version` table (versioned migration runner) — replaces ad-hoc `IF NOT EXISTS` ordering
+- **Tooling**: Vitest test suite for Zod schemas and the migration runner; ESLint + Prettier config; GitHub Actions CI (lint + test + build) on push and PR
+- **Docs**: unified version to 1.0.4 across `package.json`, README, and CLAUDE.md
 
 ### v1.0.3 — 2026-05-24
 - **Advanced Photo Editor**: rotate, resize (W+H with aspect lock), interactive crop with 8 handles + aspect presets (1:1, 4:3, 16:9, 9:16), effects panel (brightness, contrast, saturation, blur, sharpen, grayscale, invert) with live CSS preview
