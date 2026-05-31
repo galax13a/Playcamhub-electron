@@ -8,6 +8,7 @@ import store    from '../../../../src/renderer/store.js';
 import { viewHeader } from '../../../../src/renderer/components/ui.js';
 import { openModal, showToast } from '../../../../src/renderer/components/Modal.js';
 import { esc }  from '../../../../src/renderer/utils/html.js';
+import MultiPlayer from '../../../../src/renderer/components/MultiPlayer.js';
 
 const PER_PAGE = 24;
 
@@ -200,6 +201,11 @@ export async function renderGallery(el, extra = {}) {
   `;
   selBar.innerHTML = `
     <span id="sel-count" style="font-size:13px;font-weight:700;color:var(--text-primary)">0 seleccionados</span>
+    <button id="sel-open" class="btn btn-sm" disabled
+      style="background:linear-gradient(90deg,#7c3aed,#a78bfa);color:#fff;border:none;padding:6px 14px;border-radius:8px;
+             cursor:pointer;font-size:13px;font-weight:700">
+      ▶ Abrir en mini-players
+    </button>
     <button id="sel-album" class="btn btn-sm btn-primary" disabled>📁 Agregar a álbum</button>
     <button id="sel-delete" class="btn btn-sm" disabled
       style="background:#FF3355;color:#fff;border:none;padding:6px 14px;border-radius:8px;
@@ -358,6 +364,12 @@ export async function renderGallery(el, extra = {}) {
     selBar.querySelector('#sel-count').textContent = `${n} seleccionado${n !== 1 ? 's' : ''}`;
     selBar.querySelector('#sel-album').disabled  = n === 0;
     selBar.querySelector('#sel-delete').disabled = n === 0;
+    // Habilitar "Abrir" solo si hay al menos un video seleccionado
+    const hasVideo = [...selected].some(id => {
+      const m = currentItems.find(x => x.id === id);
+      return m && m.media_type === 'video';
+    });
+    selBar.querySelector('#sel-open').disabled = !hasVideo;
   }
   function enterSelectMode() {
     selectMode = true;
@@ -449,6 +461,7 @@ export async function renderGallery(el, extra = {}) {
   function createCard(media, idx) {
     const card    = document.createElement('div');
     card.className = 'gal-card';
+    card.dataset.id = media.id;
     const isVideo  = media.media_type === 'video';
     const thumb    = media.thumbnail_path ? API.mediaThumbUrl(media.id) : null;
     const displayName = media.title || media.file_name;
@@ -1201,6 +1214,31 @@ export async function renderGallery(el, extra = {}) {
   selBar.querySelector('#sel-album').addEventListener('click', () => {
     if (selected.size === 0) return;
     openAlbumModal([...selected]);
+  });
+
+  selBar.querySelector('#sel-open').addEventListener('click', () => {
+    if (selected.size === 0) return;
+    // Filtrar a videos seleccionados, conservando el orden visual del grid
+    const videos = [];
+    [...gridEl.querySelectorAll('.gal-card')].forEach(card => {
+      const id = Number(card.dataset.id);
+      if (!selected.has(id)) return;
+      const m = currentItems.find(x => x.id === id);
+      if (!m || m.media_type !== 'video') return;
+      videos.push({
+        id: m.id,
+        title: m.title || m.file_name || `Video #${m.id}`,
+        src: API.mediaViewUrl(m.id),
+        mime: m.mime_type,
+      });
+    });
+    if (!videos.length) {
+      showToast('No hay videos en la selección', 'info');
+      return;
+    }
+    showToast(`Abriendo ${videos.length} mini-player(s)…`, 'success');
+    MultiPlayer.openMany(videos);
+    exitSelectMode();
   });
 
   selBar.querySelector('#sel-delete').addEventListener('click', () => {

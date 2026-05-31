@@ -1,0 +1,409 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+ * MultiPlayer — ventanas flotantes con 3 temas (dark / light / rick-morty)
+ * El overlay #mp-overlay no captura clics (pointer-events:none).
+ * Las ventanas dentro sí capturan eventos (pointer-events:auto).
+ * ────────────────────────────────────────────────────────────────────────── */
+
+#mp-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9000;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* ── Variables por tema ─────────────────────────────────────────────────── */
+
+#mp-overlay[data-mp-theme="dark"] {
+  --mp-bg:        #16181d;
+  --mp-bg-2:      #1f232b;
+  --mp-bg-3:      #2a313c;
+  --mp-text:      #e6edf3;
+  --mp-muted:     #8b949e;
+  --mp-border:    #2a313c;
+  --mp-accent:    #7c3aed;
+  --mp-accent-2:  #a78bfa;
+  --mp-danger:    #f85149;
+  --mp-shadow:    0 12px 48px rgba(0,0,0,.55);
+  --mp-glow:      0 0 0 1px rgba(124,58,237,.35);
+}
+
+#mp-overlay[data-mp-theme="light"] {
+  --mp-bg:        #ffffff;
+  --mp-bg-2:      #f4f5f8;
+  --mp-bg-3:      #e9ebf0;
+  --mp-text:      #1f2630;
+  --mp-muted:     #6b7280;
+  --mp-border:    #d6dae1;
+  --mp-accent:    #2563eb;
+  --mp-accent-2:  #3b82f6;
+  --mp-danger:    #dc2626;
+  --mp-shadow:    0 12px 40px rgba(15,23,42,.18);
+  --mp-glow:      0 0 0 1px rgba(37,99,235,.30);
+}
+
+#mp-overlay[data-mp-theme="rick-morty"] {
+  --mp-bg:        #0f3a2f;
+  --mp-bg-2:      #16523f;
+  --mp-bg-3:      #1e5e44;
+  --mp-text:      #d4faff;
+  --mp-muted:     #9ddfd0;
+  --mp-border:    #1bd97b;
+  --mp-accent:    #97ce4c;
+  --mp-accent-2:  #c8f55e;
+  --mp-danger:    #ff5a9e;
+  --mp-shadow:    0 0 30px rgba(151,206,76,.6), 0 12px 48px rgba(0,0,0,.7);
+  --mp-glow:      0 0 0 2px rgba(151,206,76,.85), 0 0 24px rgba(151,206,76,.4);
+}
+
+/* ── Window ──────────────────────────────────────────────────────────────── */
+
+.mp-window {
+  position: fixed;
+  pointer-events: auto;
+  background: var(--mp-bg);
+  color: var(--mp-text);
+  border: 1px solid var(--mp-border);
+  border-radius: 14px;
+  box-shadow: var(--mp-shadow);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-width: 260px;
+  min-height: 180px;
+  transition: box-shadow .2s ease, transform .15s ease;
+}
+.mp-window.mp-active {
+  box-shadow: var(--mp-glow), var(--mp-shadow);
+  transform: translateY(-1px);
+}
+
+/* Titlebar */
+.mp-titlebar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--mp-bg-2);
+  border-bottom: 1px solid var(--mp-border);
+  cursor: move;
+  user-select: none;
+}
+.mp-dot {
+  display: inline-block;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: filter .15s;
+  flex-shrink: 0;
+}
+.mp-dot:hover { filter: brightness(1.2); }
+.mp-close          { background: #ff5f57; }
+.mp-min            { background: #ffbd2e; }
+.mp-resize-cycle   { background: #28c940; }
+
+.mp-ttl {
+  flex: 1;
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: .01em;
+  color: var(--mp-text);
+}
+.mp-theme-sel {
+  background: var(--mp-bg-3);
+  color: var(--mp-text);
+  border: 1px solid var(--mp-border);
+  border-radius: 6px;
+  font-size: 11px;
+  padding: 2px 4px;
+  cursor: pointer;
+}
+
+/* Video area */
+.mp-video-area {
+  position: relative;
+  background: #000;
+  flex: 1;
+  overflow: hidden;
+}
+.mp-video-area video { display: block; width: 100%; height: 100%; background: #000; }
+
+.mp-err {
+  position: absolute; inset: 0;
+  display: none;
+  align-items: center; justify-content: center;
+  background: rgba(0,0,0,.85);
+  color: var(--mp-danger);
+  font-size: 13px;
+  padding: 10px;
+  text-align: center;
+}
+.mp-window.mp-has-error .mp-err { display: flex; }
+
+/* Big unmute prompt (visible only while muted) */
+.mp-unmute {
+  position: absolute;
+  bottom: 10px; right: 10px;
+  width: 38px; height: 38px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0,0,0,.65);
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+  transition: transform .2s, background .2s;
+}
+.mp-unmute:hover { background: rgba(0,0,0,.85); transform: scale(1.08); }
+
+/* Controls */
+.mp-controls {
+  background: var(--mp-bg-2);
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--mp-text);
+  border-top: 1px solid var(--mp-border);
+}
+.mp-progress {
+  height: 7px;
+  background: var(--mp-bg-3);
+  border-radius: 4px;
+  position: relative;
+  cursor: pointer;
+  overflow: hidden;
+}
+.mp-buf {
+  position: absolute; inset: 0;
+  background: var(--mp-border);
+  opacity: .65;
+  width: 0%;
+  z-index: 0;
+}
+.mp-bar {
+  position: relative;
+  height: 100%;
+  width: 0%;
+  z-index: 1;
+  background: linear-gradient(90deg, var(--mp-accent), var(--mp-accent-2));
+  box-shadow: 0 0 8px var(--mp-accent);
+}
+.mp-row { display: flex; align-items: center; gap: 8px; }
+.mp-row button {
+  background: transparent;
+  color: var(--mp-text);
+  border: none;
+  cursor: pointer;
+  padding: 2px 4px;
+  font-size: 14px;
+  line-height: 1;
+}
+.mp-row button:hover { color: var(--mp-accent-2); }
+.mp-time {
+  font-variant-numeric: tabular-nums;
+  font-size: 11px;
+  min-width: 92px;
+  text-align: center;
+  color: var(--mp-muted);
+}
+.mp-vol { width: 64px; accent-color: var(--mp-accent); }
+.mp-rate {
+  background: var(--mp-bg-3);
+  color: var(--mp-text);
+  border: 1px solid var(--mp-border);
+  border-radius: 4px;
+  font-size: 11px;
+  padding: 1px 4px;
+  cursor: pointer;
+}
+
+/* Footer with actions */
+.mp-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: var(--mp-bg);
+  border-top: 1px solid var(--mp-border);
+  font-size: 13px;
+}
+.mp-act {
+  background: transparent;
+  color: var(--mp-text);
+  border: none;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 6px;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: background .15s, transform .15s;
+}
+.mp-act:hover { background: var(--mp-bg-3); }
+.mp-act.mp-pulse {
+  animation: mp-pulse .4s ease-out;
+}
+@keyframes mp-pulse {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+.mp-rating {
+  display: inline-flex;
+  gap: 1px;
+  margin-left: auto;
+}
+.mp-star {
+  cursor: pointer;
+  font-size: 16px;
+  color: var(--mp-muted);
+  transition: color .15s, transform .15s;
+}
+.mp-star.mp-hover,
+.mp-star:hover { color: #f5b400; }
+.mp-rating[data-rating="0"] .mp-star { color: var(--mp-muted); }
+.mp-star:not(.mp-hover) {
+  color: var(--mp-muted);
+}
+.mp-star {
+  /* applied above; ★ vs ☆ controlled in JS via textContent */
+}
+
+/* Comments panel (toggle .open) */
+.mp-cmt-panel {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height .25s ease;
+  background: var(--mp-bg);
+  border-top: 1px solid var(--mp-border);
+}
+.mp-cmt-panel.open {
+  max-height: 240px;
+}
+.mp-cmt-list {
+  max-height: 180px;
+  overflow-y: auto;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.mp-cmt {
+  background: var(--mp-bg-2);
+  border: 1px solid var(--mp-border);
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+.mp-cmt-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--mp-muted);
+  margin-bottom: 2px;
+}
+.mp-cmt-head strong { color: var(--mp-text); }
+.mp-cmt-body { font-size: 12.5px; color: var(--mp-text); word-break: break-word; }
+.mp-cmt-empty { color: var(--mp-muted); font-size: 12px; padding: 6px 4px; }
+.mp-cmt-input {
+  display: flex;
+  gap: 6px;
+  padding: 6px 10px 10px;
+}
+.mp-cmt-input input {
+  flex: 1;
+  background: var(--mp-bg-3);
+  color: var(--mp-text);
+  border: 1px solid var(--mp-border);
+  border-radius: 6px;
+  padding: 5px 8px;
+  font-size: 12px;
+  outline: none;
+}
+.mp-cmt-input input:focus { border-color: var(--mp-accent); }
+.mp-cmt-input button {
+  background: var(--mp-accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.mp-cmt-input button:hover { background: var(--mp-accent-2); }
+
+/* Minimized */
+.mp-window.mp-minimized .mp-video-area,
+.mp-window.mp-minimized .mp-controls,
+.mp-window.mp-minimized .mp-footer,
+.mp-window.mp-minimized .mp-cmt-panel { display: none; }
+.mp-window.mp-minimized { height: auto !important; min-height: 0; width: 260px !important; }
+
+/* Resize handle */
+.mp-resize-handle {
+  position: absolute;
+  right: 0; bottom: 0;
+  width: 18px; height: 18px;
+  cursor: nwse-resize;
+  background:
+    linear-gradient(135deg, transparent 50%,
+      var(--mp-muted) 50%, var(--mp-muted) 60%, transparent 60%,
+      transparent 70%, var(--mp-muted) 70%, var(--mp-muted) 80%, transparent 80%);
+  z-index: 5;
+  opacity: .7;
+}
+.mp-resize-handle:hover { opacity: 1; }
+.mp-window.mp-minimized .mp-resize-handle { display: none; }
+
+/* ── Rick & Morty extras: efectos sutiles tipo portal ──────────────────── */
+
+#mp-overlay[data-mp-theme="rick-morty"] .mp-window {
+  background:
+    radial-gradient(circle at 0% 0%, rgba(151,206,76,.18), transparent 40%),
+    radial-gradient(circle at 100% 100%, rgba(27,217,123,.15), transparent 50%),
+    var(--mp-bg);
+  border-color: var(--mp-accent);
+}
+#mp-overlay[data-mp-theme="rick-morty"] .mp-titlebar {
+  background:
+    linear-gradient(90deg, rgba(151,206,76,.10), transparent 60%),
+    var(--mp-bg-2);
+}
+#mp-overlay[data-mp-theme="rick-morty"] .mp-ttl {
+  font-family: "Courier New", monospace;
+  letter-spacing: .05em;
+  text-shadow: 0 0 6px rgba(151,206,76,.45);
+}
+#mp-overlay[data-mp-theme="rick-morty"] .mp-bar {
+  background: linear-gradient(90deg, #97ce4c, #c8f55e, #97ce4c);
+  box-shadow: 0 0 12px #97ce4c, 0 0 22px rgba(151,206,76,.4);
+}
+#mp-overlay[data-mp-theme="rick-morty"] .mp-act:hover,
+#mp-overlay[data-mp-theme="rick-morty"] .mp-row button:hover {
+  text-shadow: 0 0 8px var(--mp-accent);
+}
+#mp-overlay[data-mp-theme="rick-morty"] .mp-window.mp-active {
+  animation: mp-portal-glow 2.4s ease-in-out infinite;
+}
+@keyframes mp-portal-glow {
+  0%, 100% { box-shadow: 0 0 0 2px rgba(151,206,76,.55), 0 0 22px rgba(151,206,76,.35), 0 12px 40px rgba(0,0,0,.7); }
+  50%      { box-shadow: 0 0 0 2px rgba(200,245,94,.85), 0 0 36px rgba(151,206,76,.6),  0 12px 40px rgba(0,0,0,.7); }
+}
+
+/* ── Light theme extras ──────────────────────────────────────────────────── */
+
+#mp-overlay[data-mp-theme="light"] .mp-window {
+  border-color: var(--mp-border);
+}
+#mp-overlay[data-mp-theme="light"] .mp-bar {
+  background: linear-gradient(90deg, #2563eb, #60a5fa);
+  box-shadow: 0 0 6px rgba(37,99,235,.4);
+}

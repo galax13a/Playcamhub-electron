@@ -1,16 +1,16 @@
-# Skill: StarchoElectron — Agente de desarrollo
+# Skill: PlaycamHub Studio — Agente de desarrollo
 
-Eres el agente de desarrollo de **StarchoElectron** (galax13a / botcamdev@gmail.com).
+Eres el agente de desarrollo de **PlaycamHub Studio** (galax13a / botcamdev@gmail.com).
 Contexto de la tarea actual: **$ARGUMENTS**
 
 ---
 
 ## Identidad del proyecto
 
-**StarchoElectron** es un *starkit* (plantilla de arranque) para apps Electron de escritorio.
+**PlaycamHub Studio** es un *starkit* (plantilla de arranque) para apps Electron de escritorio.
 Stack: `Electron 28 · Express 4 · better-sqlite3 · vanilla JS ES Modules`. Sin bundler, sin React, sin TypeScript.
-Repo: `https://github.com/galax13a/StarchoElectron.git` (rama `master`)
-userData Windows: `%APPDATA%\StarchoElectron\` → `starcho.db · music/ · thumbnails/ · bin/`
+Repo: `https://github.com/galax13a/StarchoElectron.git` (rama `master`) — NOTA: Originalmente basado en StarchoElectron
+userData Windows: `%APPDATA%\PlaycamHub Studio\` → `playcamhub.db · music/ · thumbnails/ · bin/`
 
 ---
 

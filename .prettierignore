@@ -1,0 +1,8 @@
+node_modules/
+dist/
+assets/
+placamhub-multimedia/
+package-lock.json
+*.min.js
+*.css
+*.md

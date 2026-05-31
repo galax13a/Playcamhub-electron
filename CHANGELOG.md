@@ -9,6 +9,9 @@ All notable changes to PlaycamHub Studio will be documented in this file.
 - Toolchain bumped for Electron 42 / Node 24 ABI compatibility: `electron-builder` 24 → 26, `@electron/rebuild` 3.6 → 4, `better-sqlite3` 9 → 12 (Electron 42 prebuilds)
 - Auto-updater stack aligned with electron-builder 26: `electron-updater` 6.1 → 6.3+, `electron-log` 5.1 → 5.2+ (matching metadata/blockmap format)
 
+### Fixed
+- Auto-updater feed: `build.publish.repo` corrected `PlaycamHub-Studio` → `Playcamhub-electron` so update metadata is fetched from the actual releases repo (was a 404)
+
 ### Migration notes
 - Run `npm install` then `npm run rebuild` to rebuild native modules (better-sqlite3, sharp) against the Electron 42 ABI
 - Smoke-test the preload bridge: prod uses `sandbox: true`, so verify `window.electronAPI` and the embedded Express server still work after the upgrade

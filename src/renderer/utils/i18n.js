@@ -11,6 +11,7 @@ const T = {
     nav_multimedia:'Multimedia Play',
     nav_gallery:'Gallery', nav_albums:'Albums', nav_upload:'Upload', nav_favorites:'Favorites',
     nav_video_feed:'Feed', nav_speedtest:'Speed Test', nav_camera:'Record',
+    nav_videoplayer:'Video Player',
     sidebar_collapse:'Collapse sidebar', sidebar_expand:'Expand sidebar',
     // Nav (legacy keys kept for compatibility)
     dashboard:'Dashboard', library:'Library', search:'Search',
@@ -160,6 +161,7 @@ const T = {
     nav_multimedia:'Multimedia Play',
     nav_gallery:'Galería', nav_albums:'Álbumes', nav_upload:'Subir', nav_favorites:'Favoritos',
     nav_video_feed:'Feed', nav_speedtest:'Test de Velocidad', nav_camera:'Grabar',
+    nav_videoplayer:'Reproductor de Video',
     sidebar_collapse:'Ocultar menú', sidebar_expand:'Mostrar menú',
     dashboard:'Inicio', library:'Biblioteca', search:'Buscar',
     upload:'Importar Archivos', history:'Historial', settings:'Configuración',
@@ -280,6 +282,7 @@ const T = {
     nav_multimedia:'Multimedia Play',
     nav_gallery:'Galeria', nav_albums:'Álbuns', nav_upload:'Enviar', nav_favorites:'Favoritos',
     nav_video_feed:'Feed', nav_speedtest:'Teste de Velocidade', nav_camera:'Gravar',
+    nav_videoplayer:'Reprodutor de Vídeo',
     sidebar_collapse:'Ocultar menu', sidebar_expand:'Mostrar menu',
     dashboard:'Início', library:'Biblioteca', search:'Pesquisar',
     upload:'Importar Arquivos', history:'Histórico', settings:'Configurações',

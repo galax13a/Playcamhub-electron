@@ -1,4 +1,5 @@
 'use strict';
+// @ts-check
 
 const { z } = require('zod');
 
@@ -34,5 +35,9 @@ const SongUpdateSchema = z.object({
 const ThumbnailSchema = z.object({
   filePath: z.string().trim().min(1, 'filePath es obligatorio').max(1000),
 });
+
+/** @typedef {z.infer<typeof IdParamsSchema>} IdParams */
+/** @typedef {z.infer<typeof SongQuerySchema>} SongQuery */
+/** @typedef {z.infer<typeof SongUpdateSchema>} SongUpdateInput */
 
 module.exports = { IdParamsSchema, SongQuerySchema, LimitQuerySchema, HistoryQuerySchema, SongUpdateSchema, ThumbnailSchema };

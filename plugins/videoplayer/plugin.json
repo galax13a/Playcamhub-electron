@@ -1,0 +1,9 @@
+{
+  "id":          "videoplayer",
+  "name":        "Video Player",
+  "version":     "1.0.0",
+  "description": "Reproductor de video avanzado con ventanas flotantes, drag&drop, historial y playlists. Soporta URLs directas (MP4/HLS) y archivos locales.",
+  "author":      "PlaycamHub Dev",
+  "icon":        "🎞️",
+  "color":       "#7c3aed"
+}

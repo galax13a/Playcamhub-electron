@@ -1,4 +1,5 @@
 'use strict';
+// @ts-check
 
 const { z } = require('zod');
 
@@ -28,5 +29,10 @@ const ProfileUpdateSchema = z.object({
   whatsapp:  z.string().trim().max(30,  'Máximo 30 caracteres').optional().nullable().default(null),
   avatar:    z.string().max(500_000, 'Avatar demasiado grande').optional().nullable().default(null),
 });
+
+/** @typedef {z.infer<typeof LoginSchema>} LoginInput */
+/** @typedef {z.infer<typeof RegisterSchema>} RegisterInput */
+/** @typedef {z.infer<typeof ProfileQuerySchema>} ProfileQuery */
+/** @typedef {z.infer<typeof ProfileUpdateSchema>} ProfileUpdateInput */
 
 module.exports = { LoginSchema, RegisterSchema, ProfileQuerySchema, ProfileUpdateSchema };

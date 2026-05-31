@@ -1,4 +1,5 @@
 'use strict';
+// @ts-check
 
 const { z } = require('zod');
 
@@ -30,5 +31,9 @@ const ContactCreateSchema = z.object({
 const ContactUpdateSchema = ContactCreateSchema.partial().extend({
   name: z.string().trim().min(1, 'El nombre es obligatorio').max(120).optional(),
 });
+
+/** @typedef {z.infer<typeof ContactQuerySchema>} ContactQuery */
+/** @typedef {z.infer<typeof ContactCreateSchema>} ContactCreateInput */
+/** @typedef {z.infer<typeof ContactUpdateSchema>} ContactUpdateInput */
 
 module.exports = { IdParamsSchema, ContactQuerySchema, ContactCreateSchema, ContactUpdateSchema };
